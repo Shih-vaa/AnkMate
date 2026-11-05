@@ -10,6 +10,7 @@ from academics.queries import with_current_class
 from accounts.access import has_perm, scopes_for, students_in_scope, visible_students
 from accounts.decorators import require_perm
 from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED, SCOPE_CHILDREN, SCOPE_SELF
+from assessments import services as marks_services
 from attendance import services as attendance_services
 from fees import services as fee_services
 from people.models import Guardian, Staff, Student
@@ -83,6 +84,10 @@ def dashboard(request):
             by_child = attendance_services.percentages_for([c.pk for c in ctx["children"]], first, last)
             for child in ctx["children"]:
                 child.att_month = by_child[child.pk]
+        if has_perm(user, school, "marks.view") and ctx["children"] and year:
+            latest = marks_services.latest_results_for([c.pk for c in ctx["children"]], year, school)
+            for child in ctx["children"]:
+                child.latest = latest.get(child.pk)
         if has_perm(user, school, "fees.view") and ctx["children"]:
             owed = fee_services.balances_for([c.pk for c in ctx["children"]], fee_services.today())
             for child in ctx["children"]:

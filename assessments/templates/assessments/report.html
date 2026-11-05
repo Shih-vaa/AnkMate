@@ -1,0 +1,101 @@
+{% extends "web/base.html" %}
+{% block title %}Report card - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small noprint"><a href="{% url 'marks_student' student.pk %}">&larr; {{ student.full_name }}</a></p>
+
+{% if preview %}<div class="notice noprint" style="margin-bottom:1rem">Preview: this includes marks that are not published yet. Parents see only published exams.</div>{% endif %}
+
+<article class="doc card report">
+  <header class="doc-head">
+    <div>
+      <div class="doc-school">{{ school.name }}</div>
+      <div class="muted small">{{ school.address }}{% if school.city %}, {{ school.city }}{% endif %}</div>
+    </div>
+    <div class="doc-title"><strong>REPORT CARD</strong><div>Session {{ report.year.name }}</div></div>
+  </header>
+
+  <dl class="facts doc-facts">
+    <dt>Student</dt><dd>{{ student.full_name }}</dd>
+    <dt>Class</dt><dd>{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% if student.cur_roll %} &middot; Roll {{ student.cur_roll }}{% endif %}{% else %}-{% endif %}</dd>
+    <dt>Admission no.</dt><dd>{{ student.admission_no }}</dd>
+    {% if student.date_of_birth %}<dt>Date of birth</dt><dd>{{ student.date_of_birth|date:"j F Y" }}</dd>{% endif %}
+  </dl>
+
+  {% if not report.exams %}
+    <p class="muted">No results have been published yet for this session.</p>
+  {% else %}
+    <div class="table-wrap" style="border:0">
+      <table class="table doc-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            {% for e in report.exams %}<th class="num">{{ e.name }}<br><span class="wd">{{ e.weightage|floatformat:"-1" }}%</span></th>{% endfor %}
+            <th class="num">Final %</th><th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in report.subjects %}
+            <tr>
+              <td>{{ s.subject.name }}{% if s.optional %} <span class="muted small">(optional)</span>{% endif %}</td>
+              {% for c in s.cells %}
+                <td class="num">{% if c.state == "result" %}{{ c.marks|floatformat:"-2" }}<span class="muted small">/{{ c.max|floatformat:"-2" }}</span>{% elif c.state == "absent" %}AB{% elif c.state == "pending" %}<span class="muted">-</span>{% else %}<span class="muted">n/a</span>{% endif %}</td>
+              {% endfor %}
+              <td class="num{% if s.passed is False %} danger{% endif %}"><strong>{% if s.percent is None %}-{% else %}{{ s.percent|floatformat:"-1" }}{% endif %}</strong></td>
+              <td>{{ s.grade }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>Total</strong></td>
+            {% for t in report.exam_totals %}<td class="num">{% if t.maximum %}{{ t.obtained|floatformat:"-2" }}<span class="muted small">/{{ t.maximum|floatformat:"-2" }}</span>{% else %}-{% endif %}</td>{% endfor %}
+            <td class="num"><strong>{% if report.overall %}{{ report.overall.percent|floatformat:"-1" }}{% else %}-{% endif %}</strong></td>
+            <td><strong>{{ report.overall.grade }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {% if report.overall %}
+      <p style="margin-top:.75rem">
+        <strong>Result:</strong>
+        {% if report.overall.below_pass %}Below the pass mark ({{ report.pass_percent|floatformat:"-1" }}%) in {{ report.overall.below_pass|join:", " }}.{% else %}All subjects at or above the pass mark ({{ report.pass_percent|floatformat:"-1" }}%).{% endif %}
+        {% if not report.overall.complete %}<span class="muted small">(Provisional: more exams are still to come this session.)</span>{% endif %}
+      </p>
+    {% endif %}
+  {% endif %}
+
+  {% if attendance and attendance.marked %}
+    <p><strong>Attendance:</strong> {{ attendance.percentage|floatformat:"-1" }}% over {{ attendance.marked }} school day{{ attendance.marked|pluralize }} this session.</p>
+  {% endif %}
+
+  <div class="remark">
+    <strong>Class teacher's remarks</strong>
+    <p>{% if remark %}{{ remark.text }}{% else %}<span class="muted">-</span>{% endif %}</p>
+  </div>
+
+  {% if report.bands %}
+    <p class="small muted">Grade scale: {% for b in report.bands %}{{ b.label }} &ge; {{ b.min_percent|floatformat:"-1" }}%{% if not forloop.last %} &middot; {% endif %}{% endfor %}. Final % is the weighted result over the exams held.</p>
+  {% endif %}
+
+  <div class="signatures"><span>Class teacher</span><span>Parent / guardian</span><span>Principal</span></div>
+</article>
+
+<div class="actions noprint">
+  <button class="btn secondary" type="button" onclick="window.print()">Print</button>
+  {% if can_preview and not preview %}<a class="btn secondary" href="?preview=1">Preview with unpublished marks</a>{% endif %}
+  {% if preview %}<a class="btn secondary" href="{% url 'marks_report' student.pk %}">Show published only</a>{% endif %}
+</div>
+
+{% if can_remark %}
+  <form method="post" action="{% url 'marks_remark' student.pk %}" class="card noprint" style="margin-top:1rem;max-width:620px">
+    {% csrf_token %}
+    <h3>Class teacher's remark</h3>
+    <div class="field" style="margin-top:.5rem">
+      <label for="text" class="sr-only">Remark</label>
+      <input type="text" id="text" name="text" maxlength="300" value="{{ remark.text }}" placeholder="One or two sentences for the report card">
+    </div>
+    <button class="btn secondary" type="submit">Save remark</button>
+  </form>
+{% endif %}
+{% endblock %}

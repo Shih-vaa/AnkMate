@@ -11,6 +11,14 @@ _ACTIVE_NAV = {
     "attendance_mark": "attendance",
     "attendance_register": "attendance",
     "attendance_student": "attendance",
+    "marks_home": "marks",
+    "marks_exams": "marks",
+    "marks_entry_index": "marks",
+    "marks_enter": "marks",
+    "marks_sheet_index": "marks",
+    "marks_sheet": "marks",
+    "marks_student": "marks",
+    "marks_report": "marks",
     "fee_structure": "fees",
     "fee_home": "fees",
     "fee_student": "fees",
@@ -50,6 +58,8 @@ def app_context(request):
         nav.append({"key": "students", "label": label, "url_name": "student_list"})
     if "attendance.view" in perms or "attendance.mark" in perms:
         nav.append({"key": "attendance", "label": "Attendance", "url_name": "attendance_home"})
+    if "marks.view" in perms or "marks.enter" in perms:
+        nav.append({"key": "marks", "label": "Marks", "url_name": "marks_home"})
     if "fees.view" in perms:
         nav.append({"key": "fees", "label": "Fees", "url_name": "fee_home"})
 

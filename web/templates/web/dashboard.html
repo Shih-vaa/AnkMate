@@ -102,6 +102,9 @@
         {% if c.fee and c.fee.outstanding > 0 %}
           <div class="small" style="margin-top:.35rem">Fees due: <strong>{{ c.fee.outstanding|inr0 }}</strong>{% if c.fee.overdue > 0 %} <span class="badge s-overdue">Overdue</span>{% endif %}</div>
         {% endif %}
+        {% if c.latest %}
+          <div class="small" style="margin-top:.35rem">Latest result ({{ c.latest.exam }}): <strong>{{ c.latest.percent|floatformat:"-1" }}%</strong>{% if c.latest.grade %} &middot; {{ c.latest.grade }}{% endif %}</div>
+        {% endif %}
         {% if c.att_month %}
           <div class="small" style="margin-top:.35rem">Attendance this month: <strong>{% if c.att_month.percentage is None %}not taken yet{% else %}{{ c.att_month.percentage|floatformat:"-1" }}%{% endif %}</strong></div>
         {% endif %}

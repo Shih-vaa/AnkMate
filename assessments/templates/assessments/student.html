@@ -1,0 +1,69 @@
+{% extends "web/base.html" %}
+{% load l10n %}
+{% block title %}Progress - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_home' %}">&larr; Marks</a></p>
+<div class="page-head">
+  <h1>{{ student.full_name }}</h1>
+  <p class="muted">{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% endif %} &middot; Adm. {{ student.admission_no }}
+    {% if report.has_draft %}<span class="badge s-partial">Includes unpublished marks (staff only)</span>{% endif %}</p>
+</div>
+
+{% if not report or not report.exams %}
+  <div class="card empty">No results have been published yet.</div>
+{% else %}
+  {% if report.overall %}
+    <div class="cards cols-4 compact">
+      <div class="card stat"><div class="num">{{ report.overall.percent|floatformat:"-1" }}%</div><div class="label">Overall{% if not report.overall.complete %} so far{% endif %}</div></div>
+      <div class="card stat"><div class="num">{{ report.overall.grade|default:"-" }}</div><div class="label">Grade</div></div>
+      {% for t in report.exam_totals %}{% if forloop.counter <= 2 %}
+        <div class="card stat"><div class="num">{% if t.percent is None %}-{% else %}{{ t.percent|floatformat:"-1" }}%{% endif %}</div><div class="label">{{ t.exam.name }}</div></div>
+      {% endif %}{% endfor %}
+    </div>
+    {% if report.overall.below_pass %}
+      <div class="notice" style="margin-top:1rem">Below the pass mark ({{ report.pass_percent|floatformat:"-1" }}%) in: <strong>{{ report.overall.below_pass|join:", " }}</strong>.</div>
+    {% endif %}
+  {% endif %}
+
+  <p style="margin-top:1rem"><a class="btn secondary" href="{% url 'marks_report' student.pk %}">Open report card</a></p>
+
+  <h2>Subjects</h2>
+  <div class="cards">
+    {% for s in report.subjects %}
+      <div class="card">
+        <div class="inv-line">
+          <h3>{{ s.subject.name }}{% if s.optional %} <span class="muted small">(optional)</span>{% endif %}</h3>
+          {% if s.percent is not None %}<span class="inv-amt">{{ s.percent|floatformat:"-1" }}% {% if s.grade %}<span class="badge {% if s.passed %}s-paid{% else %}s-overdue{% endif %}">{{ s.grade }}</span>{% endif %}</span>{% endif %}
+        </div>
+        {% if s.percent is not None %}<div class="bar" aria-hidden="true"><span class="{% if not s.passed %}low{% endif %}" style="width: {{ s.percent|unlocalize }}%"></span></div>{% endif %}
+        <ul class="plain exam-lines">
+          {% for c in s.cells %}
+            {% if c.state != "none" %}
+              <li>
+                <span>{{ c.exam.name }}</span>
+                <span class="muted">{% if c.state == "result" %}<strong>{{ c.marks|floatformat:"-2" }}</strong> / {{ c.max|floatformat:"-2" }} &middot; {{ c.percent|floatformat:"-1" }}%{% elif c.state == "absent" %}Absent{% else %}Not entered{% endif %}</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+        {% if s.percent is not None and not s.complete %}<div class="small muted">Result so far: more exams to come.</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>Exam by exam</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Exam</th><th class="num">Marks</th><th class="num">Percent</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for t in report.exam_totals %}
+          <tr><td>{{ t.exam.name }}{% if not t.exam.is_published %} <span class="badge s-partial">Draft</span>{% endif %}</td>
+            <td class="num">{% if t.maximum %}{{ t.obtained|floatformat:"-2" }} / {{ t.maximum|floatformat:"-2" }}{% else %}-{% endif %}</td>
+            <td class="num">{% if t.percent is None %}-{% else %}{{ t.percent|floatformat:"-1" }}%{% endif %}</td>
+            <td>{{ t.grade }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

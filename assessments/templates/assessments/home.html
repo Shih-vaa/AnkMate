@@ -1,0 +1,57 @@
+{% extends "web/base.html" %}
+{% block title %}Marks{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Marks</h1>
+  <p class="muted">{% if year %}Academic year {{ year.name }}{% else %}No current academic year is set.{% endif %}</p>
+</div>
+
+{% if exams %}
+  <h2 style="margin-top:0">Exams</h2>
+  <div class="cards">
+    {% for exam in exams %}
+      <div class="card">
+        <h3>{{ exam.name }}</h3>
+        <div class="muted small">Counts for {{ exam.weightage|floatformat:"-1" }}% of the final result{% if exam.starts_on %} &middot; starts {{ exam.starts_on|date:"j M Y" }}{% endif %}</div>
+        <div class="chips">
+          {% if exam.is_locked %}<span class="badge s-cancelled">Locked</span>{% elif exam.is_published %}<span class="badge s-paid">Published</span>{% else %}<span class="badge s-partial">Draft</span>{% endif %}
+        </div>
+        {% if exam.progress %}<div class="small muted" style="margin-top:.4rem">Marks entered: {{ exam.progress.entered }} of {{ exam.progress.expected }}</div>{% endif %}
+        <div class="actions">
+          {% if can_enter %}<a class="btn" href="{% url 'marks_entry_index' exam.pk %}">Enter marks</a>{% endif %}
+          {% if can_view_sheets %}<a class="btn secondary" href="{% url 'marks_sheet_index' exam.pk %}">Class results</a>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% if is_principal %}<p style="margin-top:1rem"><a class="btn secondary" href="{% url 'marks_exams' %}">Manage exams, publish and lock</a></p>{% endif %}
+{% endif %}
+
+{% if kids %}
+  <h2{% if not exams %} style="margin-top:0"{% endif %}>{% if kids|length == 1 %}Your child{% else %}Your children{% endif %}</h2>
+  <div class="cards">
+    {% for kid in kids %}
+      <div class="card">
+        <h3>{{ kid.full_name }}</h3>
+        <div class="muted small">{% if kid.cur_grade %}{{ kid.cur_grade }}-{{ kid.cur_section }}{% endif %}</div>
+        {% if kid.latest %}
+          <div class="pcts">
+            <div><span class="pct">{{ kid.latest.percent|floatformat:"-1" }}%</span><span class="muted small">{{ kid.latest.exam }}</span></div>
+            {% if kid.latest.grade %}<div><span class="pct">{{ kid.latest.grade }}</span><span class="muted small">Grade</span></div>{% endif %}
+          </div>
+        {% else %}
+          <p class="muted small" style="margin-top:.5rem">No results have been published yet.</p>
+        {% endif %}
+        <div class="actions">
+          <a class="btn" href="{% url 'marks_student' kid.pk %}">Progress</a>
+          <a class="btn secondary" href="{% url 'marks_report' kid.pk %}">Report card</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if not exams and not kids %}
+  <div class="card empty">There are no marks to show for your account yet.</div>
+{% endif %}
+{% endblock %}
