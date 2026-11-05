@@ -1,0 +1,3 @@
+<p class="legend small muted">
+  {% for code, label in statuses %}<span class="chip st-{{ code }}">{{ code }}</span> {{ label }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+</p>

@@ -18,11 +18,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Project apps. Dependency direction: core <- accounts <- people <- academics <- fees <- web
+    # Project apps. Dependency direction: core <- accounts <- people <- academics <- attendance/fees <- web
     "core",
     "accounts",
     "people",
     "academics",
+    "attendance",
     "fees",
     "web",
 ]

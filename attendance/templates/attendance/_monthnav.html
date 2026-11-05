@@ -1,0 +1,5 @@
+<nav class="monthnav" aria-label="Month">
+  {% if prev_key %}<a class="btn secondary" href="?month={{ prev_key }}" aria-label="Previous month">&larr;</a>{% else %}<span class="btn secondary disabled" aria-hidden="true">&larr;</span>{% endif %}
+  <strong>{{ month_start|date:"F Y" }}</strong>
+  {% if next_key %}<a class="btn secondary" href="?month={{ next_key }}" aria-label="Next month">&rarr;</a>{% else %}<span class="btn secondary disabled" aria-hidden="true">&rarr;</span>{% endif %}
+</nav>

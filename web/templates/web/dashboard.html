@@ -10,12 +10,26 @@
 </div>
 
 {% if school_stats %}
-  <div class="cards cols-4">
+  <div class="cards cols-4 compact">
     <div class="card stat"><div class="num">{{ school_stats.students }}</div><div class="label">Active students</div></div>
     <div class="card stat"><div class="num">{{ school_stats.guardians }}</div><div class="label">Parents / guardians</div></div>
     <div class="card stat"><div class="num">{{ school_stats.staff }}</div><div class="label">Staff</div></div>
     <div class="card stat"><div class="num">{{ school_stats.sections }}</div><div class="label">Class sections</div></div>
   </div>
+
+  {% if attendance_today %}
+    <h2>Today's attendance</h2>
+    <a class="card" href="{% url 'attendance_home' %}" style="color:inherit;display:block">
+      {% if attendance_today.reason %}
+        <strong>School closed</strong> <span class="muted">({{ attendance_today.reason }})</span>
+      {% elif attendance_today.marked %}
+        <span class="pct">{{ attendance_today.present }}</span>
+        <span class="muted">present out of {{ attendance_today.marked }} students marked &middot; {{ attendance_today.sections_marked }} of {{ attendance_today.sections }} classes done</span>
+      {% else %}
+        <strong>No class has taken attendance yet today.</strong>
+      {% endif %}
+    </a>
+  {% endif %}
 
   <h2>Students by class</h2>
   {% if strength %}
@@ -42,14 +56,23 @@
   <h2>Your classes</h2>
   <div class="cards">
     {% for item in my_sections %}
-      <a class="card" href="{% url 'student_list' %}?section={{ item.section.pk }}" style="color:inherit">
-        <h3>{{ item.section }}</h3>
-        <div class="muted small">{{ item.section.n_students }} student{{ item.section.n_students|pluralize }}</div>
+      <div class="card">
+        <a href="{% url 'student_list' %}?section={{ item.section.pk }}" style="color:inherit">
+          <h3>{{ item.section }}</h3>
+          <div class="muted small">{{ item.section.n_students }} student{{ item.section.n_students|pluralize }}</div>
+        </a>
         <div class="chips">
           {% if item.is_class_teacher %}<span class="badge accent">Class teacher</span>{% endif %}
           {% for s in item.subjects %}<span class="badge">{{ s }}</span>{% endfor %}
         </div>
-      </a>
+        {% if item.can_mark %}
+          <div class="actions">
+            {% if item.att_state == "closed" %}<span class="muted small">No school today</span>
+            {% elif item.att_state == "marked" %}<span class="badge">Attendance taken</span><a class="btn secondary" href="{% url 'attendance_mark' item.section.pk %}">Edit</a>
+            {% else %}<a class="btn" href="{% url 'attendance_mark' item.section.pk %}">Take attendance</a>{% endif %}
+          </div>
+        {% endif %}
+      </div>
     {% endfor %}
   </div>
 {% endif %}
@@ -64,6 +87,9 @@
           {% if c.cur_grade %}{{ c.cur_grade }}-{{ c.cur_section }}{% if c.cur_roll %} &middot; Roll {{ c.cur_roll }}{% endif %}{% else %}Not enrolled this year{% endif %}
           &middot; Adm. {{ c.admission_no }}
         </div>
+        {% if c.att_month %}
+          <div class="small" style="margin-top:.35rem">Attendance this month: <strong>{% if c.att_month.percentage is None %}not taken yet{% else %}{{ c.att_month.percentage|floatformat:"-1" }}%{% endif %}</strong></div>
+        {% endif %}
       </a>
     {% endfor %}
   </div>
@@ -83,6 +109,6 @@
 {% endif %}
 
 <div class="notice" style="margin-top:2rem">
-  <strong>Demo build.</strong> Attendance, marks and online fee payment are the next modules. Fee amounts shown are dummy values.
+  <strong>Demo build.</strong> Fee invoices, marks and online payment are the next modules. Fee amounts shown are dummy values.
 </div>
 {% endblock %}

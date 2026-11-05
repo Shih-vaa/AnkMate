@@ -20,6 +20,12 @@
   --radius: 12px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", sans-serif;
+  /* attendance statuses: always paired with a letter, never colour alone */
+  --st-P: #17613a; --st-P-bg: #dff3e7;
+  --st-A: #a3261b; --st-A-bg: #fbe3e0;
+  --st-L: #8a5a00; --st-L-bg: #fcefd3;
+  --st-H: #0a5f7a; --st-H-bg: #daf0f6;
+  --st-E: #54449f; --st-E-bg: #e9e5fa;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -39,6 +45,11 @@
     --accent-soft: #33280f;
     --danger: #f2a29c;
     --shadow: none;
+    --st-P: #7fd8a4; --st-P-bg: #12301f;
+    --st-A: #f5a39b; --st-A-bg: #3a1815;
+    --st-L: #f0c56a; --st-L-bg: #33270b;
+    --st-H: #7cd0e6; --st-H-bg: #0f2e38;
+    --st-E: #b9adf0; --st-E-bg: #251f45;
   }
 }
 
@@ -159,3 +170,85 @@ dl.facts dd { margin: 0; }
 .auth { min-height: 100vh; display: grid; place-items: center; padding: 1.25rem; }
 .auth .card { width: 100%; max-width: 400px; padding: 1.5rem; }
 .auth .logo { width: 56px; height: 56px; border-radius: 14px; margin-bottom: .75rem; }
+
+/* ---- attendance ------------------------------------------------------------------------- */
+.messages { display: grid; gap: .5rem; margin-bottom: 1rem; }
+.msg { padding: .7rem .9rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.msg.success { border-color: var(--st-P); background: var(--st-P-bg); color: var(--text); }
+.msg.error { border-color: var(--st-A); background: var(--st-A-bg); color: var(--text); }
+.btn.disabled { opacity: .4; pointer-events: none; }
+.actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+
+.chip {
+  display: inline-block; min-width: 1.6rem; padding: 0 .35rem; border-radius: 6px; text-align: center;
+  font-size: .8rem; font-weight: 700; line-height: 1.5rem;
+}
+.chip.st-P, .cal-d.st-P { background: var(--st-P-bg); color: var(--st-P); }
+.chip.st-A, .cal-d.st-A { background: var(--st-A-bg); color: var(--st-A); }
+.chip.st-L, .cal-d.st-L { background: var(--st-L-bg); color: var(--st-L); }
+.chip.st-H, .cal-d.st-H { background: var(--st-H-bg); color: var(--st-H); }
+.chip.st-E, .cal-d.st-E { background: var(--st-E-bg); color: var(--st-E); }
+.legend { margin: .5rem 0 1rem; line-height: 2; }
+
+.daybar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.datepick { display: flex; gap: .5rem; align-items: center; }
+.datepick input { width: auto; }
+.monthnav { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; max-width: 420px; }
+.markbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .25rem; }
+
+/* one row per student, big tap targets */
+.att-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .7rem .9rem; }
+.seg { border: 0; margin: 0; padding: 0; display: flex; gap: .35rem; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg label {
+  display: grid; place-items: center; width: 44px; height: 44px; margin: 0; border-radius: 10px; cursor: pointer;
+  border: 2px solid var(--field-border); background: var(--field); color: var(--muted); font-weight: 700;
+}
+.seg input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 1px; }
+.seg input:checked + label.seg-P { background: var(--st-P-bg); border-color: var(--st-P); color: var(--st-P); }
+.seg input:checked + label.seg-A { background: var(--st-A-bg); border-color: var(--st-A); color: var(--st-A); }
+.seg input:checked + label.seg-L { background: var(--st-L-bg); border-color: var(--st-L); color: var(--st-L); }
+.seg input:checked + label.seg-H { background: var(--st-H-bg); border-color: var(--st-H); color: var(--st-H); }
+.seg input:checked + label.seg-E { background: var(--st-E-bg); border-color: var(--st-E); color: var(--st-E); }
+.seg:disabled label { cursor: default; opacity: .75; }
+.sticky-save { position: sticky; bottom: 4.6rem; padding: .75rem 0; background: linear-gradient(transparent, var(--bg) 30%); }
+@media (min-width: 900px) { .sticky-save { bottom: 0; } .att-row { flex-wrap: nowrap; } }
+
+/* parent cards */
+.pcts { display: flex; gap: 1.5rem; margin-top: .6rem; }
+.pcts > div { display: flex; flex-direction: column; }
+.pct { font-size: 1.6rem; font-weight: 700; color: var(--primary); line-height: 1.1; }
+
+/* month calendar */
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 520px; }
+.cal-h { text-align: center; font-size: .75rem; font-weight: 700; color: var(--muted); padding: .25rem 0; }
+.cal-d {
+  position: relative; min-height: 52px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+  padding: 2px 4px; display: flex; flex-direction: column; justify-content: space-between;
+}
+.cal-d .dn { font-size: .7rem; color: var(--muted); }
+.cal-d .code { font-weight: 700; text-align: center; font-size: 1rem; }
+.cal-d .small-note { font-size: .6rem; font-weight: 600; color: var(--muted); }
+.cal-d.out { visibility: hidden; }
+.cal-d.off { background: var(--surface-2); border-style: dashed; }
+.cal-d.future { opacity: .5; }
+
+/* class register */
+.reg { font-size: .85rem; }
+.reg th.dcol, .reg td.dcell { text-align: center; padding: .35rem .2rem; min-width: 30px; }
+.reg th.dcol .wd { font-weight: 500; opacity: .7; }
+.reg th.dcol.off { background: var(--border); }
+.reg .sticky-col { position: sticky; left: 0; background: var(--surface); z-index: 1; min-width: 150px; }
+.reg thead .sticky-col { background: var(--surface-2); }
+.reg tfoot td { border-top: 2px solid var(--border); font-weight: 600; }
+
+/* compact stat tiles: 2x2 on phones so the content below stays near the top */
+.cards.compact { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+.cards.compact .card { padding: .75rem .85rem; }
+.cards.compact .stat .num { font-size: 1.5rem; }
+@media (min-width: 900px) {
+  .cards.compact { gap: .85rem; }
+  .cards.compact.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .cards.compact .card { padding: 1rem 1.1rem; }
+  .cards.compact .stat .num { font-size: 1.9rem; }
+}

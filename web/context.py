@@ -7,6 +7,10 @@ _ACTIVE_NAV = {
     "dashboard": "dashboard",
     "student_list": "students",
     "student_detail": "students",
+    "attendance_home": "attendance",
+    "attendance_mark": "attendance",
+    "attendance_register": "attendance",
+    "attendance_student": "attendance",
     "fee_structure": "fees",
 }
 
@@ -36,6 +40,8 @@ def app_context(request):
     if "students.view" in perms:
         label = students_label(scopes_for(user, school, "students.view"))
         nav.append({"key": "students", "label": label, "url_name": "student_list"})
+    if "attendance.view" in perms or "attendance.mark" in perms:
+        nav.append({"key": "attendance", "label": "Attendance", "url_name": "attendance_home"})
     if "fees.view" in perms:
         nav.append({"key": "fees", "label": "Fees", "url_name": "fee_structure"})
 

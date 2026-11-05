@@ -3,29 +3,19 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
+from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 
 from academics.models import AcademicYear, Enrollment, Grade, Section, TeachingAssignment
-from accounts.access import scopes_for, students_in_scope, visible_students
+from academics.queries import with_current_class
+from accounts.access import has_perm, scopes_for, students_in_scope, visible_students
 from accounts.decorators import require_perm
 from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED, SCOPE_CHILDREN, SCOPE_SELF
+from attendance import services as attendance_services
 from fees.models import FeeStructure
 from people.models import Guardian, Staff, Student
-
-
-def with_current_class(qs):
-    """Annotate students with this year's class/section/roll (one query, no per-row lookups)."""
-    current = Enrollment.objects.filter(student=OuterRef("pk"), academic_year__is_current=True)
-    return qs.annotate(
-        cur_grade=Subquery(current.values("section__grade__name")[:1]),
-        cur_grade_order=Subquery(current.values("section__grade__order")[:1]),
-        cur_section=Subquery(current.values("section__name")[:1]),
-        cur_section_id=Subquery(current.values("section_id")[:1]),
-        cur_roll=Subquery(current.values("roll_no")[:1]),
-    )
 
 
 @login_required
@@ -36,6 +26,7 @@ def dashboard(request):
 
     scopes = scopes_for(user, school)
     year = AcademicYear.objects.filter(school=school, is_current=True).first()
+    now = attendance_services.today()
     ctx = {"year": year}
 
     if SCOPE_ALL in scopes:
@@ -52,6 +43,8 @@ def dashboard(request):
             "sections": Section.objects.filter(school=school, academic_year__is_current=True).count(),
         }
         ctx["strength"] = list(strength)
+        if has_perm(user, school, "attendance.view"):
+            ctx["attendance_today"] = attendance_services.school_day_summary(school, now)
 
     if SCOPE_ASSIGNED in scopes:
         my_staff = list(Staff.objects.filter(school=school, user=user, is_active=True).values_list("pk", flat=True))
@@ -73,10 +66,24 @@ def dashboard(request):
             {"section": s, "is_class_teacher": s.class_teacher_id in my_staff, "subjects": [a.subject.name for a in s.my_assignments]}
             for s in sections
         ]
+        if has_perm(user, school, "attendance.mark"):
+            markable = set(attendance_services.markable_sections(user, school).values_list("pk", flat=True))
+            closed = attendance_services.non_working_reason(school, now)
+            taken = attendance_services.day_overview(markable, now)
+            for item in ctx["my_sections"]:
+                sid = item["section"].pk
+                item["can_mark"] = sid in markable
+                if sid in markable:
+                    item["att_state"] = "closed" if closed else ("marked" if taken[sid]["marked"] else "not_marked")
 
     if SCOPE_CHILDREN in scopes:
         children = with_current_class(students_in_scope(user, school, SCOPE_CHILDREN)).order_by("first_name")
         ctx["children"] = list(children)
+        if has_perm(user, school, "attendance.view") and ctx["children"]:
+            first, last = attendance_services.month_range(now.year, now.month)
+            by_child = attendance_services.percentages_for([c.pk for c in ctx["children"]], first, last)
+            for child in ctx["children"]:
+                child.att_month = by_child[child.pk]
 
     if SCOPE_SELF in scopes:
         ctx["me"] = list(with_current_class(students_in_scope(user, school, SCOPE_SELF)))

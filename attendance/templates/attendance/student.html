@@ -1,0 +1,55 @@
+{% extends "web/base.html" %}
+{% block title %}Attendance - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'attendance_home' %}">&larr; Attendance</a></p>
+<div class="page-head">
+  <h1>{{ student.full_name }}</h1>
+  <p class="muted">{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% endif %} &middot; Adm. {{ student.admission_no }}</p>
+</div>
+
+<div class="cards cols-4 compact">
+  <div class="card stat"><div class="num">{% if month.percentage is None %}-{% else %}{{ month.percentage|floatformat:"-1" }}%{% endif %}</div><div class="label">{{ month_start|date:"F" }}</div></div>
+  <div class="card stat"><div class="num">{% if year_to_date.percentage is None %}-{% else %}{{ year_to_date.percentage|floatformat:"-1" }}%{% endif %}</div><div class="label">This academic year</div></div>
+  <div class="card stat"><div class="num">{{ month.counts.A }}</div><div class="label">Days absent in {{ month_start|date:"F" }}</div></div>
+  <div class="card stat"><div class="num">{{ month.counts.L }}</div><div class="label">Times late in {{ month_start|date:"F" }}</div></div>
+</div>
+
+<h2>Calendar</h2>
+{% include "attendance/_monthnav.html" %}
+
+<div class="cal" role="table" aria-label="Attendance for {{ month_start|date:'F Y' }}">
+  <div class="cal-h" role="columnheader">Mon</div><div class="cal-h" role="columnheader">Tue</div><div class="cal-h" role="columnheader">Wed</div>
+  <div class="cal-h" role="columnheader">Thu</div><div class="cal-h" role="columnheader">Fri</div><div class="cal-h" role="columnheader">Sat</div><div class="cal-h" role="columnheader">Sun</div>
+  {% for week in weeks %}{% for cell in week %}
+    <div class="cal-d{% if not cell.in_month %} out{% endif %}{% if cell.off %} off{% endif %}{% if cell.future %} future{% endif %}{% if cell.status %} st-{{ cell.status }}{% endif %}" role="cell"{% if cell.note %} title="{{ cell.note }}"{% endif %}>
+      <span class="dn">{{ cell.date.day }}</span>
+      {% if cell.in_month %}
+        {% if cell.status %}<span class="code">{{ cell.status }}</span>
+        {% elif cell.off %}<span class="code small-note">{% if cell.note == "Weekly off" %}Off{% else %}Holiday{% endif %}</span>
+        {% elif cell.unmarked %}<span class="code muted">-</span>{% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}{% endfor %}
+</div>
+{% include "attendance/_legend.html" %}
+{% if holiday_list %}
+  <p class="small muted">School closed: {% for d, name in holiday_list %}{{ d|date:"j M" }} ({{ name }}){% if not forloop.last %}, {% endif %}{% endfor %}. Other shaded days are the weekly off.</p>
+{% endif %}
+
+<h2>Days missed or late</h2>
+{% if exceptions %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in exceptions %}
+          <tr><td>{{ r.date|date:"D, j M" }}</td><td><span class="chip st-{{ r.status }}">{{ r.status }}</span> {{ r.get_status_display }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">Nothing to show for {{ month_start|date:"F" }}. {% if month.marked %}Full attendance so far.{% else %}No attendance has been recorded yet.{% endif %}</div>
+{% endif %}
+<p class="small muted" style="margin-top:1rem">Percentage counts Present and Late as a full day, Half day as half, and Absent and On leave as zero, over the days attendance was taken.</p>
+{% endblock %}

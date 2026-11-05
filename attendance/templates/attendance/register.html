@@ -1,0 +1,47 @@
+{% extends "web/base.html" %}
+{% block title %}Register - {{ section }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'attendance_home' %}">&larr; Attendance</a></p>
+<div class="page-head" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-end">
+  <div>
+    <h1>{{ section }} register</h1>
+    <p class="muted">{% if section.class_teacher %}Class teacher: {{ section.class_teacher.full_name }}{% endif %}</p>
+  </div>
+  {% if can_mark %}<a class="btn" href="{% url 'attendance_mark' section.pk %}">Take attendance</a>{% endif %}
+</div>
+
+{% include "attendance/_monthnav.html" %}
+{% include "attendance/_legend.html" %}
+
+<div class="table-wrap">
+  <table class="table reg">
+    <thead>
+      <tr>
+        <th class="sticky-col">Student</th>
+        {% for day in days %}<th class="dcol{% if day.off %} off{% endif %}" title="{{ day.date|date:'D j M' }}{% if day.off %} - {{ day.off }}{% endif %}">{{ day.date.day }}<br><span class="wd">{{ day.date|date:"D"|slice:":1" }}</span></th>{% endfor %}
+        <th class="num">%</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td class="sticky-col"><a href="{% url 'attendance_student' row.student.pk %}">{{ row.student.full_name }}</a><div class="muted small">Roll {{ row.roll_no|default:"-" }}</div></td>
+          {% for status in row.cells %}
+            <td class="dcell">{% if status %}<span class="chip st-{{ status }}">{{ status }}</span>{% endif %}</td>
+          {% endfor %}
+          <td class="num"><strong>{% if row.summary.percentage is None %}-{% else %}{{ row.summary.percentage|floatformat:"-1" }}{% endif %}</strong></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="{{ days|length|add:2 }}" class="muted">No students enrolled.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="sticky-col"><strong>Present</strong></td>
+        {% for day in days %}<td class="dcell">{% if not day.off %}{{ day.present }}{% endif %}</td>{% endfor %}
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% endblock %}

@@ -142,7 +142,11 @@ class Command(BaseCommand):
                     )
                     Enrollment.objects.create(school=school, student=student, section=section, roll_no=roll)
 
+        from attendance.demo import seed_attendance
+
+        attendance_count = seed_attendance(school)
         self.stdout.write(self.style.SUCCESS(f"Seeded {school.name} ({school.board}), session {year.name}."))
+        self.stdout.write(f"  {attendance_count} attendance records.")
         self.stdout.write(
             f"  {Staff.objects.filter(school=school).count()} staff, {Student.objects.filter(school=school).count()} students, "
             f"{Guardian.objects.filter(school=school).count()} guardians, {Section.objects.filter(school=school).count()} sections."

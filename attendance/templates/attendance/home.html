@@ -1,0 +1,74 @@
+{% extends "web/base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Attendance</h1>
+  <p class="muted">{{ today|date:"l, j F Y" }}{% if today_reason %} &middot; <span class="badge accent">{{ today_reason }}</span>{% endif %}</p>
+</div>
+
+{% if class_rows %}
+  <h2 style="margin-top:0">Classes</h2>
+
+  {# Desk layout #}
+  <div class="table-wrap hide-sm">
+    <table class="table">
+      <thead><tr><th>Class</th><th>Today</th><th class="num">Present</th><th></th></tr></thead>
+      <tbody>
+        {% for r in class_rows %}
+          <tr>
+            <td><strong>{{ r.section }}</strong></td>
+            <td>
+              {% if r.state == "marked" %}<span class="badge">Marked</span>
+              {% elif r.state == "closed" %}<span class="muted">Closed</span>
+              {% else %}<span class="badge accent">Not marked</span>{% endif %}
+            </td>
+            <td class="num">{% if r.state == "marked" %}{{ r.present }} / {{ r.total }}{% else %}<span class="muted">-</span>{% endif %}</td>
+            <td class="num">
+              {% if r.can_mark %}<a class="btn" href="{% url 'attendance_mark' r.section.pk %}">{% if r.state == "marked" %}Edit{% else %}Take attendance{% endif %}</a>{% endif %}
+              {% if r.can_view %}<a class="btn secondary" href="{% url 'attendance_register' r.section.pk %}">Register</a>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Phone layout #}
+  <ul class="rows show-sm">
+    {% for r in class_rows %}
+      <li class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+          <strong>{{ r.section }}</strong>
+          {% if r.state == "marked" %}<span class="badge">{{ r.present }} / {{ r.total }} present</span>
+          {% elif r.state == "closed" %}<span class="muted small">Closed today</span>
+          {% else %}<span class="badge accent">Not marked</span>{% endif %}
+        </div>
+        <div class="actions">
+          {% if r.can_mark %}<a class="btn" href="{% url 'attendance_mark' r.section.pk %}">{% if r.state == "marked" %}Edit{% else %}Take attendance{% endif %}</a>{% endif %}
+          {% if r.can_view %}<a class="btn secondary" href="{% url 'attendance_register' r.section.pk %}">Register</a>{% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if kids %}
+  <h2{% if not class_rows %} style="margin-top:0"{% endif %}>{% if kids|length == 1 %}Your child{% else %}Your children{% endif %}</h2>
+  <div class="cards">
+    {% for kid in kids %}
+      <a class="card" href="{% url 'attendance_student' kid.pk %}" style="color:inherit">
+        <h3>{{ kid.full_name }}</h3>
+        <div class="muted small">{% if kid.cur_grade %}{{ kid.cur_grade }}-{{ kid.cur_section }}{% endif %}</div>
+        <div class="pcts">
+          <div><span class="pct">{% if kid.att_month.percentage is None %}-{% else %}{{ kid.att_month.percentage|floatformat:"-1" }}%{% endif %}</span><span class="muted small">This month</span></div>
+          <div><span class="pct">{% if kid.att_year.percentage is None %}-{% else %}{{ kid.att_year.percentage|floatformat:"-1" }}%{% endif %}</span><span class="muted small">This year</span></div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if not class_rows and not kids %}
+  <div class="card empty">There's no attendance to show for your account yet.</div>
+{% endif %}
+{% endblock %}

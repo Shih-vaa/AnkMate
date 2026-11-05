@@ -1,0 +1,70 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block title %}Take attendance{% endblock %}
+{% block extra_head %}<script src="{% static 'attendance/mark.js' %}" defer></script>{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'attendance_home' %}">&larr; Attendance</a></p>
+<div class="page-head">
+  <h1>{{ section }}</h1>
+  <p class="muted">{{ rows|length }} student{{ rows|length|pluralize }}{% if section.class_teacher %} &middot; Class teacher: {{ section.class_teacher.full_name }}{% endif %}</p>
+</div>
+
+<div class="daybar">
+  <a class="btn secondary" href="?date={{ prev_date|date:'Y-m-d' }}" aria-label="Previous day">&larr;</a>
+  <form method="get" class="datepick">
+    <label class="sr-only" for="date">Date</label>
+    <input type="date" id="date" name="date" value="{{ on_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}">
+    <button class="btn secondary" type="submit">Go</button>
+  </form>
+  {% if next_date %}<a class="btn secondary" href="?date={{ next_date|date:'Y-m-d' }}" aria-label="Next day">&rarr;</a>{% else %}<span class="btn secondary disabled" aria-hidden="true">&rarr;</span>{% endif %}
+</div>
+
+<h2 style="margin:.75rem 0">{{ on_date|date:"l, j F Y" }}</h2>
+
+{% if closed %}
+  <div class="notice">School is closed on this day: <strong>{{ blocked_reason }}</strong>. Attendance can't be taken.</div>
+{% elif blocked_reason %}
+  <div class="notice">{{ blocked_reason }} You can look, but not change anything.</div>
+{% elif already_marked %}
+  <div class="notice">Attendance was already taken for this day. Saving will update it.</div>
+{% else %}
+  <div class="notice">Not taken yet. Everyone starts as <strong>Present</strong>: change the exceptions, then save.</div>
+{% endif %}
+
+{% if rows %}
+<form method="post" id="mark-form" style="margin-top:1rem">
+  {% csrf_token %}
+  <input type="hidden" name="date" value="{{ on_date|date:'Y-m-d' }}">
+
+  <div class="markbar">
+    {% if editable %}<button type="button" class="btn secondary" data-mark-all="P">All present</button>{% endif %}
+    <span id="tally" class="muted small" aria-live="polite"></span>
+  </div>
+  {% include "attendance/_legend.html" %}
+
+  <ul class="rows">
+    {% for row in rows %}
+      <li class="card att-row">
+        <div class="who">
+          <strong>{{ row.student.full_name }}</strong>
+          <div class="muted small">Roll {{ row.roll_no|default:"-" }} &middot; Adm. {{ row.student.admission_no }}</div>
+        </div>
+        <fieldset class="seg"{% if not editable %} disabled{% endif %}>
+          <legend class="sr-only">Attendance for {{ row.student.full_name }}</legend>
+          {% for code, label in statuses %}
+            <input type="radio" name="status_{{ row.student.pk }}" id="st{{ row.student.pk }}{{ code }}" value="{{ code }}"{% if row.current == code %} checked{% endif %}>
+            <label for="st{{ row.student.pk }}{{ code }}" class="seg-{{ code }}" title="{{ label }}"><span aria-hidden="true">{{ code }}</span><span class="sr-only">{{ label }}</span></label>
+          {% endfor %}
+        </fieldset>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if editable %}
+    <div class="sticky-save"><button class="btn block" type="submit">Save attendance</button></div>
+  {% endif %}
+</form>
+{% else %}
+  <div class="card empty">No students are enrolled in this class.</div>
+{% endif %}
+{% endblock %}

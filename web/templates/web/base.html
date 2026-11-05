@@ -3,6 +3,7 @@
 <head>
   {% include "web/_head.html" %}
   <title>{% block title %}Home{% endblock %} - {{ PRODUCT_NAME }}</title>
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 <div class="shell">
@@ -36,6 +37,11 @@
     </header>
 
     <main class="page">
+      {% if messages %}
+        <div class="messages" role="status">
+          {% for message in messages %}<div class="msg {{ message.tags }}">{{ message }}</div>{% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </main>
   </div>

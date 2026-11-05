@@ -102,5 +102,27 @@ def visible_students(user, school, perm="students.view"):
     return base.filter(combined).distinct() if found else base.none()
 
 
+def visible_sections(user, school, perm):
+    """Class sections (current year) whose class-level data the user may see: school-wide roles see all,
+    teachers see the sections they teach. Parents and students get none: class registers are not theirs."""
+    from academics.models import Section
+    from people.models import Staff
+
+    base = Section.objects.filter(school=school, academic_year__is_current=True)
+    combined = Q()
+    found = False
+    for membership in memberships_for(user, school):
+        role = membership.role
+        if perm not in role.permissions:
+            continue
+        if role.scope == SCOPE_ALL:
+            return base
+        if role.scope == SCOPE_ASSIGNED:
+            staff = Staff.objects.filter(school=school, user=user, is_active=True).values("pk")
+            combined |= Q(class_teacher__in=staff) | Q(assignments__teacher__in=staff)
+            found = True
+    return base.filter(combined).distinct() if found else base.none()
+
+
 def can_view_student(user, school, student, perm="students.view"):
     return visible_students(user, school, perm).filter(pk=student.pk).exists()
