@@ -63,4 +63,8 @@ def apply_preset(school, key, session_start_year=None):
                 school=school, academic_year=year, grade=grade, head=heads[head_code],
                 defaults={"amount": amount, "frequency": frequency, "notes": "Dummy demo value"},
             )
+
+    from assessments.presets import apply_assessment_preset
+
+    apply_assessment_preset(school, year, data)
     return year
