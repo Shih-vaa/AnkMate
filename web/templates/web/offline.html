@@ -1,0 +1,20 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="{% static 'web/app.css' %}">
+  <title>Offline</title>
+</head>
+<body>
+<main class="auth">
+  <div class="card">
+    <h1>You're offline</h1>
+    <p class="muted">We can't reach the school's server right now. Check your internet connection and try again.</p>
+    <p class="small muted">For privacy, student and fee details are never saved on this device.</p>
+    <button class="btn block" onclick="location.reload()">Try again</button>
+  </div>
+</main>
+</body>
+</html>

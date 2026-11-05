@@ -1,0 +1,52 @@
+{% extends "web/base.html" %}
+{% block title %}{{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'student_list' %}">&larr; Back</a></p>
+<div class="page-head">
+  <h1>{{ student.full_name }}</h1>
+  <p class="muted">
+    {% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% if student.cur_roll %} &middot; Roll {{ student.cur_roll }}{% endif %}{% else %}Not enrolled this year{% endif %}
+    {% if student.status != "active" %}<span class="badge accent">{{ student.get_status_display }}</span>{% endif %}
+  </p>
+</div>
+
+<div class="cards">
+  <section class="card">
+    <h3>Profile</h3>
+    <dl class="facts" style="margin-top:.5rem">
+      <dt>Admission no.</dt><dd>{{ student.admission_no }}</dd>
+      <dt>Date of birth</dt><dd>{{ student.date_of_birth|date:"j M Y"|default:"-" }}</dd>
+      <dt>Gender</dt><dd>{{ student.get_gender_display|default:"-" }}</dd>
+      <dt>Admitted on</dt><dd>{{ student.admission_date|date:"j M Y"|default:"-" }}</dd>
+      <dt>Address</dt><dd>{{ student.address|default:"-" }}</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h3>Parents / guardians</h3>
+    {% for link in guardian_links %}
+      <div style="margin-top:.6rem">
+        <strong>{{ link.guardian.full_name }}</strong>
+        <span class="badge">{{ link.get_relation_display }}</span>{% if link.is_primary %}<span class="badge accent">Primary contact</span>{% endif %}
+        <div class="muted small">{{ link.guardian.phone|default:"No phone on record" }}{% if link.guardian.email %} &middot; {{ link.guardian.email }}{% endif %}</div>
+      </div>
+    {% empty %}
+      <p class="muted">No guardian on record.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<h2>Class history</h2>
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Academic year</th><th>Class</th><th>Roll no.</th></tr></thead>
+    <tbody>
+      {% for e in history %}
+        <tr><td>{{ e.academic_year.name }}</td><td>{{ e.section }}</td><td>{{ e.roll_no|default:"-" }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3" class="muted">No enrolment history.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

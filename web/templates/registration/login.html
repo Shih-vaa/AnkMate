@@ -1,0 +1,34 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  {% include "web/_head.html" %}
+  <title>Sign in - {{ PRODUCT_NAME }}</title>
+</head>
+<body>
+<main class="auth">
+  <div class="card">
+    <img class="logo" src="{% static 'web/icons/icon-192.png' %}" alt="">
+    <h1>{{ PRODUCT_NAME }}</h1>
+    <p class="muted">Sign in to see attendance, fees and progress.</p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="errorlist" role="alert">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+      {% endif %}
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {{ form.username }}
+      </div>
+      <div class="field">
+        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {{ form.password }}
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn block" type="submit">Sign in</button>
+    </form>
+    <p class="small muted" style="margin:1rem 0 0">Parents: use the phone number registered with the school. Forgot your password? Ask the school office.</p>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{% extends "web/base.html" %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% for item in nav %}{% if item.key == "students" %}{{ item.label }}{% endif %}{% endfor %}</h1>
+  <p class="muted">{{ page.paginator.count }} record{{ page.paginator.count|pluralize }}{% if selected_section %} in {{ selected_section }}{% endif %}</p>
+</div>
+
+<form method="get" class="toolbar" role="search">
+  <div>
+    <label for="q">Search</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Name or admission number">
+  </div>
+  <div>
+    <label for="section">Class</label>
+    <select id="section" name="section">
+      <option value="">All classes</option>
+      {% for s in sections %}<option value="{{ s.pk }}"{% if selected_section and selected_section.pk == s.pk %} selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+{% if page.object_list %}
+  {# Desk layout: dense table #}
+  <div class="table-wrap hide-sm">
+    <table class="table">
+      <thead><tr><th>Roll</th><th>Name</th><th>Class</th><th>Admission no.</th><th>Gender</th><th></th></tr></thead>
+      <tbody>
+        {% for s in page.object_list %}
+          <tr>
+            <td>{{ s.cur_roll|default:"-" }}</td>
+            <td><a href="{% url 'student_detail' s.pk %}">{{ s.full_name }}</a></td>
+            <td>{% if s.cur_grade %}{{ s.cur_grade }}-{{ s.cur_section }}{% else %}<span class="muted">-</span>{% endif %}</td>
+            <td>{{ s.admission_no }}</td>
+            <td>{{ s.get_gender_display|default:"-" }}</td>
+            <td>{% if s.status != "active" %}<span class="badge accent">{{ s.get_status_display }}</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Phone layout: tappable cards #}
+  <ul class="rows show-sm">
+    {% for s in page.object_list %}
+      <li><a class="card" href="{% url 'student_detail' s.pk %}">
+        <strong>{{ s.full_name }}</strong>
+        <div class="muted small">{% if s.cur_grade %}{{ s.cur_grade }}-{{ s.cur_section }}{% if s.cur_roll %} &middot; Roll {{ s.cur_roll }}{% endif %}{% endif %} &middot; Adm. {{ s.admission_no }}</div>
+      </a></li>
+    {% endfor %}
+  </ul>
+
+  {% if page.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page.has_previous %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.previous_page_number }}">Previous</a>{% else %}<span></span>{% endif %}
+    <span class="muted small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.next_page_number }}">Next</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+{% else %}
+  <div class="card empty">No students found.</div>
+{% endif %}
+{% endblock %}

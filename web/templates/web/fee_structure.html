@@ -1,0 +1,31 @@
+{% extends "web/base.html" %}
+{% block title %}Fee structure{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Fee structure</h1>
+  <p class="muted">{% if year %}Academic year {{ year.name }}{% else %}No current academic year is set.{% endif %}</p>
+</div>
+
+<div class="notice" style="margin-bottom:1rem">These are demo figures for illustration, not the school's actual fees.</div>
+
+{% for g in groups %}
+  <section class="card" style="margin-bottom:1rem">
+    <h3>{{ g.grade.name }}</h3>
+    <div class="table-wrap" style="margin-top:.6rem">
+      <table class="table">
+        <thead><tr><th>Fee</th><th>How often</th><th class="num">Amount (&#8377;)</th></tr></thead>
+        <tbody>
+          {% for row in g.rows %}
+            <tr><td>{{ row.head.name }}</td><td>{{ row.get_frequency_display }}</td><td class="num">{{ row.amount|floatformat:"0g" }}</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="2"><strong>Recurring fees per year</strong> <span class="muted small">(one-time fees excluded)</span></td><td class="num"><strong>{{ g.yearly_total|floatformat:"0g" }}</strong></td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+{% empty %}
+  <div class="card empty">No fee structure is available for you yet.</div>
+{% endfor %}
+{% endblock %}

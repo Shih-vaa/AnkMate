@@ -1,0 +1,88 @@
+{% extends "web/base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Hello, {{ user.first_name|default:user.username }}</h1>
+  <p class="muted">
+    {% for r in role_names %}<span class="badge">{{ r }}</span>{% endfor %}
+    {% if year %}Academic year {{ year.name }}{% endif %}
+  </p>
+</div>
+
+{% if school_stats %}
+  <div class="cards cols-4">
+    <div class="card stat"><div class="num">{{ school_stats.students }}</div><div class="label">Active students</div></div>
+    <div class="card stat"><div class="num">{{ school_stats.guardians }}</div><div class="label">Parents / guardians</div></div>
+    <div class="card stat"><div class="num">{{ school_stats.staff }}</div><div class="label">Staff</div></div>
+    <div class="card stat"><div class="num">{{ school_stats.sections }}</div><div class="label">Class sections</div></div>
+  </div>
+
+  <h2>Students by class</h2>
+  {% if strength %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Class</th><th class="num">Students</th></tr></thead>
+      <tbody>
+        {% for row in strength %}
+          <tr><td>{{ row.section__grade__name }}</td><td class="num">{{ row.n }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="card empty">No enrolments yet for this academic year.</div>
+  {% endif %}
+  <p style="margin-top:1rem">
+    <a class="btn" href="{% url 'student_list' %}">Browse students</a>
+    {% if show_admin_link %}<a class="btn secondary" href="{% url 'admin:index' %}">Manage data</a>{% endif %}
+  </p>
+{% endif %}
+
+{% if my_sections %}
+  <h2>Your classes</h2>
+  <div class="cards">
+    {% for item in my_sections %}
+      <a class="card" href="{% url 'student_list' %}?section={{ item.section.pk }}" style="color:inherit">
+        <h3>{{ item.section }}</h3>
+        <div class="muted small">{{ item.section.n_students }} student{{ item.section.n_students|pluralize }}</div>
+        <div class="chips">
+          {% if item.is_class_teacher %}<span class="badge accent">Class teacher</span>{% endif %}
+          {% for s in item.subjects %}<span class="badge">{{ s }}</span>{% endfor %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if children %}
+  <h2>Your {% if children|length == 1 %}child{% else %}children{% endif %}</h2>
+  <div class="cards">
+    {% for c in children %}
+      <a class="card" href="{% url 'student_detail' c.pk %}" style="color:inherit">
+        <h3>{{ c.full_name }}</h3>
+        <div class="muted small">
+          {% if c.cur_grade %}{{ c.cur_grade }}-{{ c.cur_section }}{% if c.cur_roll %} &middot; Roll {{ c.cur_roll }}{% endif %}{% else %}Not enrolled this year{% endif %}
+          &middot; Adm. {{ c.admission_no }}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+  <p style="margin-top:1rem"><a class="btn secondary" href="{% url 'fee_structure' %}">View fee structure</a></p>
+{% endif %}
+
+{% if me %}
+  <h2>My profile</h2>
+  <div class="cards">
+    {% for c in me %}
+      <a class="card" href="{% url 'student_detail' c.pk %}" style="color:inherit">
+        <h3>{{ c.full_name }}</h3>
+        <div class="muted small">{% if c.cur_grade %}{{ c.cur_grade }}-{{ c.cur_section }}{% endif %} &middot; Adm. {{ c.admission_no }}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="notice" style="margin-top:2rem">
+  <strong>Demo build.</strong> Attendance, marks and online fee payment are the next modules. Fee amounts shown are dummy values.
+</div>
+{% endblock %}
