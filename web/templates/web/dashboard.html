@@ -1,4 +1,5 @@
 {% extends "web/base.html" %}
+{% load money %}
 {% block title %}Home{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -28,6 +29,17 @@
       {% else %}
         <strong>No class has taken attendance yet today.</strong>
       {% endif %}
+    </a>
+  {% endif %}
+
+  {% if fees_summary %}
+    <h2>Fees</h2>
+    <a class="card" href="{% url 'fee_home' %}" style="color:inherit;display:block">
+      <div class="pcts" style="margin-top:0">
+        <div><span class="pct">{{ fees_summary.collected_this_month|inr0 }}</span><span class="muted small">Collected this month</span></div>
+        <div><span class="pct">{{ fees_summary.outstanding|inr0 }}</span><span class="muted small">Outstanding</span></div>
+        {% if fees_summary.overdue > 0 %}<div><span class="pct danger">{{ fees_summary.overdue|inr0 }}</span><span class="muted small">Overdue</span></div>{% endif %}
+      </div>
     </a>
   {% endif %}
 
@@ -87,6 +99,9 @@
           {% if c.cur_grade %}{{ c.cur_grade }}-{{ c.cur_section }}{% if c.cur_roll %} &middot; Roll {{ c.cur_roll }}{% endif %}{% else %}Not enrolled this year{% endif %}
           &middot; Adm. {{ c.admission_no }}
         </div>
+        {% if c.fee and c.fee.outstanding > 0 %}
+          <div class="small" style="margin-top:.35rem">Fees due: <strong>{{ c.fee.outstanding|inr0 }}</strong>{% if c.fee.overdue > 0 %} <span class="badge s-overdue">Overdue</span>{% endif %}</div>
+        {% endif %}
         {% if c.att_month %}
           <div class="small" style="margin-top:.35rem">Attendance this month: <strong>{% if c.att_month.percentage is None %}not taken yet{% else %}{{ c.att_month.percentage|floatformat:"-1" }}%{% endif %}</strong></div>
         {% endif %}
@@ -109,6 +124,6 @@
 {% endif %}
 
 <div class="notice" style="margin-top:2rem">
-  <strong>Demo build.</strong> Fee invoices, marks and online payment are the next modules. Fee amounts shown are dummy values.
+  <strong>Demo build.</strong> Marks and report cards, and online fee payment, are the next modules. Fee amounts shown are dummy values.
 </div>
 {% endblock %}

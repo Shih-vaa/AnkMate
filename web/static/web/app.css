@@ -252,3 +252,73 @@ dl.facts dd { margin: 0; }
   .cards.compact .card { padding: 1rem 1.1rem; }
   .cards.compact .stat .num { font-size: 1.9rem; }
 }
+
+/* ---- fees ------------------------------------------------------------------------------- */
+:root {
+  --s-paid: #17613a; --s-paid-bg: #dff3e7;
+  --s-overdue: #a3261b; --s-overdue-bg: #fbe3e0;
+  --s-partial: #8a5a00; --s-partial-bg: #fcefd3;
+  --s-due: #1f4e79; --s-due-bg: #e3edf7;
+  --s-cancelled: #5a6675; --s-cancelled-bg: #e6e9ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --s-paid: #7fd8a4; --s-paid-bg: #12301f;
+    --s-overdue: #f5a39b; --s-overdue-bg: #3a1815;
+    --s-partial: #f0c56a; --s-partial-bg: #33270b;
+    --s-due: #8fc0ea; --s-due-bg: #14283b;
+    --s-cancelled: #a9b4c1; --s-cancelled-bg: #263241;
+  }
+}
+.badge.s-paid { background: var(--s-paid-bg); color: var(--s-paid); }
+.badge.s-overdue { background: var(--s-overdue-bg); color: var(--s-overdue); }
+.badge.s-partial { background: var(--s-partial-bg); color: var(--s-partial); }
+.badge.s-due { background: var(--s-due-bg); color: var(--s-due); }
+.badge.s-cancelled { background: var(--s-cancelled-bg); color: var(--s-cancelled); }
+.danger, .pct.danger, .num.danger { color: var(--danger); }
+.stat .num.small-num { font-size: 1.3rem; padding-top: .3rem; }
+.credit { color: var(--s-paid); }
+.check { display: flex; align-items: center; gap: .5rem; font-weight: 500; min-height: 44px; }
+.check input { width: 1.2rem; height: 1.2rem; }
+ul.plain { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .35rem; }
+
+/* invoice and receipt documents */
+.doc { max-width: 720px; padding: 1.25rem 1.4rem; }
+.doc-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: .9rem; border-bottom: 2px solid var(--border); }
+.doc-school { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
+.doc-title { text-align: right; display: grid; gap: .2rem; justify-items: end; }
+.doc-facts { margin-bottom: 1rem; }
+.doc-table tfoot td { border-top: 2px solid var(--border); }
+.big-amount { font-size: 2.1rem; font-weight: 700; color: var(--primary); line-height: 1.2; margin: .5rem 0 0; }
+
+@media print {
+  .sidebar, .topbar, .bottom-nav, .noprint, .messages { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .shell { display: block; }
+  .page { padding: 0 !important; max-width: none; }
+  .card { box-shadow: none; border: 1px solid #999; background: #fff !important; }
+  .doc { max-width: none; }
+  .doc-school, .big-amount, a { color: #000 !important; text-decoration: none; }
+  .badge { border: 1px solid #666; background: #fff !important; color: #000 !important; }
+  .muted { color: #333 !important; }
+}
+
+/* big numbers must never push a tile wider than its column */
+.cards > * { min-width: 0; }
+.cards.compact .stat .num { font-size: 1.4rem; overflow-wrap: anywhere; }
+@media (min-width: 900px) { .cards.compact .stat .num { font-size: 1.55rem; } }
+
+.nowrap { white-space: nowrap; }
+@media (min-width: 900px) { .cards.compact.cols-3 { grid-template-columns: repeat(3, 1fr); } }
+.field input[type=date] {
+  width: 100%; padding: .65rem .75rem; border: 1px solid var(--field-border); border-radius: 10px; background: var(--field);
+  color: var(--text); font: inherit; min-height: 44px;
+}
+
+/* fee rows as cards on phones */
+.card.inv-row { display: grid; gap: .3rem; color: inherit; }
+.inv-line { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.inv-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* card lists on phones keep their spacing (a later .show-sm rule had flattened the grid gap) */
+@media (max-width: 899px) { .rows.show-sm { display: grid; } }

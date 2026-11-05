@@ -17,7 +17,6 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("students/", views.student_list, name="student_list"),
     path("students/<int:pk>/", views.student_detail, name="student_detail"),
-    path("fees/", views.fee_structure, name="fee_structure"),
     # PWA
     path(
         "manifest.webmanifest",

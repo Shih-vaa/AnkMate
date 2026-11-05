@@ -1,6 +1,3 @@
-from collections import OrderedDict
-from decimal import Decimal
-
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch, Q
@@ -8,13 +5,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 
-from academics.models import AcademicYear, Enrollment, Grade, Section, TeachingAssignment
+from academics.models import AcademicYear, Enrollment, Section, TeachingAssignment
 from academics.queries import with_current_class
 from accounts.access import has_perm, scopes_for, students_in_scope, visible_students
 from accounts.decorators import require_perm
 from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED, SCOPE_CHILDREN, SCOPE_SELF
 from attendance import services as attendance_services
-from fees.models import FeeStructure
+from fees import services as fee_services
 from people.models import Guardian, Staff, Student
 
 
@@ -45,6 +42,8 @@ def dashboard(request):
         ctx["strength"] = list(strength)
         if has_perm(user, school, "attendance.view"):
             ctx["attendance_today"] = attendance_services.school_day_summary(school, now)
+        if has_perm(user, school, "fees.view", all_scope=True):
+            ctx["fees_summary"] = fee_services.collection_summary(school, fee_services.today())
 
     if SCOPE_ASSIGNED in scopes:
         my_staff = list(Staff.objects.filter(school=school, user=user, is_active=True).values_list("pk", flat=True))
@@ -84,6 +83,10 @@ def dashboard(request):
             by_child = attendance_services.percentages_for([c.pk for c in ctx["children"]], first, last)
             for child in ctx["children"]:
                 child.att_month = by_child[child.pk]
+        if has_perm(user, school, "fees.view") and ctx["children"]:
+            owed = fee_services.balances_for([c.pk for c in ctx["children"]], fee_services.today())
+            for child in ctx["children"]:
+                child.fee = owed[child.pk]
 
     if SCOPE_SELF in scopes:
         ctx["me"] = list(with_current_class(students_in_scope(user, school, SCOPE_SELF)))
@@ -144,31 +147,6 @@ def student_detail(request, pk):
             "history": student.enrollments.select_related("section__grade", "academic_year").order_by("-academic_year__start_date"),
         },
     )
-
-
-@require_perm("fees.view")
-def fee_structure(request):
-    school, user = request.school, request.user
-    year = AcademicYear.objects.filter(school=school, is_current=True).first()
-
-    if SCOPE_ALL in scopes_for(user, school, "fees.view"):
-        grades = Grade.objects.filter(school=school)
-    else:
-        visible = visible_students(user, school, "fees.view")
-        grade_ids = Enrollment.objects.filter(
-            student__in=visible.values("pk"), academic_year__is_current=True
-        ).values("section__grade_id")
-        grades = Grade.objects.filter(school=school, pk__in=grade_ids)
-
-    groups = OrderedDict()
-    if year:
-        rows = FeeStructure.objects.filter(school=school, academic_year=year, grade__in=grades).select_related("grade", "head")
-        for row in rows:
-            group = groups.setdefault(row.grade_id, {"grade": row.grade, "rows": [], "yearly_total": Decimal("0")})
-            group["rows"].append(row)
-            group["yearly_total"] += row.yearly_amount
-
-    return render(request, "web/fee_structure.html", {"year": year, "groups": list(groups.values())})
 
 
 # -- PWA plumbing ------------------------------------------------------------------------------

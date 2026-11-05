@@ -1,0 +1,87 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Fees - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_home' %}">&larr; Fees</a></p>
+<div class="page-head">
+  <h1>{{ student.full_name }}</h1>
+  <p class="muted">{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% endif %} &middot; Adm. {{ student.admission_no }}</p>
+</div>
+
+<div class="cards cols-4 compact">
+  <div class="card stat"><div class="num">{{ account.outstanding|inr0 }}</div><div class="label">Outstanding</div></div>
+  <div class="card stat"><div class="num{% if account.overdue > 0 %} danger{% endif %}">{{ account.overdue|inr0 }}</div><div class="label">Overdue</div></div>
+  <div class="card stat"><div class="num">{{ account.paid|inr0 }}</div><div class="label">Paid so far</div></div>
+  <div class="card stat"><div class="num small-num">{% if account.next_due %}{{ account.next_due|date:"j M" }}{% else %}-{% endif %}</div><div class="label">{% if account.overdue > 0 %}Oldest due date{% else %}Next due date{% endif %}</div></div>
+</div>
+
+{% if can_collect and account.outstanding > 0 %}
+  <p style="margin-top:1rem"><a class="btn" href="{% url 'fee_collect_student' student.pk %}">Collect payment</a></p>
+{% endif %}
+
+<h2>Invoices</h2>
+{% if account.rows %}
+  <ul class="rows show-sm">
+    {% for row in account.rows %}
+      <li><a class="card inv-row" href="{% url 'fee_invoice' row.invoice.pk %}">
+        <div class="inv-line"><strong>{{ row.invoice.month|date:"F Y" }}</strong>{% include "fees/_status.html" with code=row.status label=row.label %}</div>
+        <div class="inv-line">
+          <span class="muted small">Due {{ row.invoice.due_date|date:"j M Y" }}</span>
+          <span class="inv-amt">{% if row.status == "paid" or row.status == "cancelled" %}{{ row.invoice.total|inr }}{% else %}{{ row.balance|inr }} <span class="muted small">to pay</span>{% endif %}</span>
+        </div>
+        <div class="muted small">{{ row.invoice.invoice_no }}{% if row.status == "partial" or row.status == "overdue" and row.paid > 0 %} &middot; paid {{ row.paid|inr }} of {{ row.invoice.total|inr }}{% endif %}</div>
+      </a></li>
+    {% endfor %}
+  </ul>
+  <div class="table-wrap hide-sm">
+    <table class="table">
+      <thead><tr><th>Invoice</th><th>Month</th><th>Due</th><th class="num">Total</th><th class="num">Paid</th><th class="num">Balance</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in account.rows %}
+          <tr>
+            <td class="nowrap"><a href="{% url 'fee_invoice' row.invoice.pk %}">{{ row.invoice.invoice_no }}</a></td>
+            <td class="nowrap">{{ row.invoice.month|date:"M Y" }}</td>
+            <td class="nowrap">{{ row.invoice.due_date|date:"j M Y" }}</td>
+            <td class="num">{{ row.invoice.total|inr }}</td>
+            <td class="num">{{ row.paid|inr }}</td>
+            <td class="num">{{ row.balance|inr }}</td>
+            <td>{% include "fees/_status.html" with code=row.status label=row.label %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">No invoices have been issued yet.</div>
+{% endif %}
+
+<h2>Payments</h2>
+{% if account.payments %}
+  <ul class="rows show-sm">
+    {% for p in account.payments %}
+      <li><a class="card inv-row" href="{% url 'fee_receipt' p.pk %}">
+        <div class="inv-line"><strong>{{ p.received_on|date:"j M Y" }}</strong>{% if p.status == "reversed" %}<span class="badge s-cancelled">Reversed</span>{% else %}<span class="inv-amt">{{ p.amount|inr }}</span>{% endif %}</div>
+        <div class="muted small">{{ p.get_method_display }} &middot; {{ p.receipt_no }}</div>
+      </a></li>
+    {% endfor %}
+  </ul>
+  <div class="table-wrap hide-sm">
+    <table class="table">
+      <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th class="num">Amount</th><th></th></tr></thead>
+      <tbody>
+        {% for p in account.payments %}
+          <tr>
+            <td class="nowrap"><a href="{% url 'fee_receipt' p.pk %}">{{ p.receipt_no }}</a></td>
+            <td class="nowrap">{{ p.received_on|date:"j M Y" }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td class="num">{{ p.amount|inr }}</td>
+            <td>{% if p.status == "reversed" %}<span class="badge s-cancelled">Reversed</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">No payments yet.</div>
+{% endif %}
+{% endblock %}

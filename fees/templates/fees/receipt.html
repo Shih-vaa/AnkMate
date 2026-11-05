@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Receipt {{ payment.receipt_no }}{% endblock %}
+{% block content %}
+<p class="small noprint"><a href="{% url 'fee_student' student.pk %}">&larr; {{ student.full_name }}</a></p>
+
+<article class="doc card">
+  <header class="doc-head">
+    <div>
+      <div class="doc-school">{{ school.name }}</div>
+      <div class="muted small">{{ school.address }}{% if school.city %}, {{ school.city }}{% endif %}</div>
+    </div>
+    <div class="doc-title">
+      <strong>FEE RECEIPT</strong>
+      <div>{{ payment.receipt_no }}</div>
+      {% if payment.status == "reversed" %}<span class="badge s-cancelled">REVERSED</span>{% endif %}
+    </div>
+  </header>
+
+  {% if payment.status == "reversed" %}
+    <div class="notice" style="margin-bottom:1rem">
+      This payment was reversed{% if payment.reversed_at %} on {{ payment.reversed_at|date:"j M Y" }}{% endif %}{% if payment.reversed_by %} by {{ payment.reversed_by.get_full_name|default:payment.reversed_by.username }}{% endif %}.
+      Reason: {{ payment.reversal_reason }}. This receipt is no longer valid.
+    </div>
+  {% endif %}
+
+  <dl class="facts doc-facts">
+    <dt>Received from</dt><dd>{{ student.full_name }} (Adm. {{ student.admission_no }})</dd>
+    <dt>Class</dt><dd>{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% else %}-{% endif %}</dd>
+    <dt>Date</dt><dd>{{ payment.received_on|date:"j F Y" }}</dd>
+    <dt>Method</dt><dd>{{ payment.get_method_display }}{% if payment.reference %} &middot; Ref. {{ payment.reference }}{% endif %}</dd>
+    {% if payment.received_by %}<dt>Received by</dt><dd>{{ payment.received_by.get_full_name|default:payment.received_by.username }}</dd>{% endif %}
+  </dl>
+
+  <div class="big-amount">{{ payment.amount|inr }}</div>
+  <div class="muted small" style="margin-bottom:1rem">{{ payment.amount|inr_words }}</div>
+
+  <table class="table doc-table">
+    <thead><tr><th>Applied to invoice</th><th>Month</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for a in allocations %}
+        <tr>
+          <td><a href="{% url 'fee_invoice' a.invoice.pk %}">{{ a.invoice.invoice_no }}</a></td>
+          <td>{{ a.invoice.month|date:"M Y" }}</td>
+          <td class="num">{{ a.amount|inr }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if payment.notes %}<p class="small muted" style="margin-top:.75rem">Note: {{ payment.notes }}</p>{% endif %}
+</article>
+
+<div class="actions noprint">
+  <button class="btn secondary" type="button" onclick="window.print()">Print</button>
+</div>
+
+{% if can_reverse %}
+  <form method="post" action="{% url 'fee_receipt_reverse' payment.pk %}" class="card noprint" style="margin-top:1rem;max-width:520px">
+    {% csrf_token %}
+    <h3>Reverse this payment</h3>
+    <p class="small muted">Use this for a bounced cheque or a payment recorded against the wrong student. The receipt stays on record, marked reversed, and the dues open again.</p>
+    <div class="field"><label for="reason">Reason</label><input type="text" id="reason" name="reason" maxlength="200" required></div>
+    <button class="btn secondary" type="submit">Reverse payment</button>
+  </form>
+{% endif %}
+{% endblock %}

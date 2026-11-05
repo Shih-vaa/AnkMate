@@ -8,5 +8,6 @@ admin.site.site_title = f"{settings.PRODUCT_NAME} admin"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("attendance/", include("attendance.urls")),
+    path("fees/", include("fees.urls")),
     path("", include("web.urls")),
 ]

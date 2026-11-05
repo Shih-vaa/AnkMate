@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Fees{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Fees</h1>
+  <p class="muted">{{ now|date:"j F Y" }}</p>
+</div>
+
+{% if summary %}
+  <div class="cards cols-4 compact">
+    <div class="card stat"><div class="num">{{ summary.billed_this_month|inr0 }}</div><div class="label">Billed in {{ now|date:"F" }}</div></div>
+    <div class="card stat"><div class="num">{{ summary.collected_this_month|inr0 }}</div><div class="label">Collected in {{ now|date:"F" }}</div></div>
+    <div class="card stat"><div class="num">{{ summary.outstanding|inr0 }}</div><div class="label">Total outstanding</div></div>
+    <div class="card stat"><div class="num">{{ summary.overdue|inr0 }}</div><div class="label">Overdue &middot; {{ summary.students_with_dues }} student{{ summary.students_with_dues|pluralize }} with dues</div></div>
+  </div>
+
+  <div class="actions" style="margin-top:1rem">
+    {% if can_collect %}<a class="btn" href="{% url 'fee_collect' %}">Collect payment</a>{% endif %}
+    <a class="btn secondary" href="{% url 'fee_dues' %}">Dues list</a>
+    {% if can_manage %}<a class="btn secondary" href="{% url 'fee_generate' %}">Generate invoices</a>{% endif %}
+    <a class="btn secondary" href="{% url 'fee_structure' %}">Fee structure</a>
+  </div>
+
+  <h2>Recent payments</h2>
+  {% if recent_payments %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Receipt</th><th>Student</th><th>Date</th><th>Method</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          {% for p in recent_payments %}
+            <tr>
+              <td class="nowrap"><a href="{% url 'fee_receipt' p.pk %}">{{ p.receipt_no }}</a>{% if p.status == "reversed" %} <span class="badge s-cancelled">Reversed</span>{% endif %}</td>
+              <td><a href="{% url 'fee_student' p.student.pk %}">{{ p.student.full_name }}</a></td>
+              <td class="nowrap">{{ p.received_on|date:"j M Y" }}</td>
+              <td>{{ p.get_method_display }}</td>
+              <td class="num">{{ p.amount|inr }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty">No payments recorded yet.</div>
+  {% endif %}
+{% endif %}
+
+{% if kids %}
+  <h2{% if not summary %} style="margin-top:0"{% endif %}>{% if kids|length == 1 %}Your child's fees{% else %}Your children's fees{% endif %}</h2>
+  <div class="cards">
+    {% for kid in kids %}
+      <a class="card" href="{% url 'fee_student' kid.pk %}" style="color:inherit">
+        <h3>{{ kid.full_name }}</h3>
+        <div class="muted small">{% if kid.cur_grade %}{{ kid.cur_grade }}-{{ kid.cur_section }}{% endif %}</div>
+        <div class="pcts">
+          <div><span class="pct">{{ kid.fee.outstanding|inr0 }}</span><span class="muted small">{% if kid.fee.outstanding > 0 %}Outstanding{% else %}Nothing due{% endif %}</span></div>
+          {% if kid.fee.overdue > 0 %}<div><span class="pct danger">{{ kid.fee.overdue|inr0 }}</span><span class="muted small">Overdue</span></div>{% endif %}
+        </div>
+        {% if kid.fee.next_due and kid.fee.outstanding > 0 %}<div class="small" style="margin-top:.4rem">{% if kid.fee.overdue > 0 %}Oldest due{% else %}Next due{% endif %}: {{ kid.fee.next_due|date:"j M Y" }}</div>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+  <p style="margin-top:1rem"><a class="btn secondary" href="{% url 'fee_structure' %}">View fee structure</a></p>
+  <p class="small muted">To pay, please contact the school office. Online payment is coming soon.</p>
+{% endif %}
+{% endblock %}

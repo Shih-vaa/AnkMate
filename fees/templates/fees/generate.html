@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Generate invoices{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_home' %}">&larr; Fees</a></p>
+<div class="page-head">
+  <h1>Generate invoices</h1>
+  <p class="muted">Bills every enrolled student for a month, using the fee structure and any concessions.</p>
+</div>
+
+{% if not year %}
+  <div class="card empty">No academic year is set up, so there is nothing to bill.</div>
+{% else %}
+  <form method="get" class="toolbar" style="grid-template-columns:1fr auto;max-width:520px">
+    <div>
+      <label for="month">Month</label>
+      <select id="month" name="month">
+        {% for m in months %}<option value="{{ m|date:'Y-m' }}"{% if m == chosen %} selected{% endif %}>{{ m|date:"F Y" }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn secondary" type="submit">Preview</button>
+  </form>
+
+  {% if preview %}
+    <div class="card" style="max-width:520px">
+      <h3>{{ chosen|date:"F Y" }}</h3>
+      <dl class="facts" style="margin-top:.5rem">
+        <dt>Will be created</dt><dd><strong>{{ preview.would_create }}</strong> invoice{{ preview.would_create|pluralize }}</dd>
+        <dt>Total billed</dt><dd><strong>{{ preview.total|inr }}</strong></dd>
+        <dt>Already issued</dt><dd>{{ preview.skipped_existing }} student{{ preview.skipped_existing|pluralize }} (left untouched)</dd>
+        <dt>Nothing to bill</dt><dd>{{ preview.skipped_no_fee }} student{{ preview.skipped_no_fee|pluralize }}</dd>
+      </dl>
+      {% if preview.would_create %}
+        <form method="post" style="margin-top:1rem">
+          {% csrf_token %}
+          <input type="hidden" name="month" value="{{ chosen|date:'Y-m' }}">
+          <button class="btn block" type="submit">Create {{ preview.would_create }} invoice{{ preview.would_create|pluralize }}</button>
+        </form>
+        <p class="small muted" style="margin-top:.75rem">Issued invoices can't be edited. If something is wrong you can cancel an invoice (before any payment) and generate it again.</p>
+      {% else %}
+        <p class="muted" style="margin-top:1rem">Everything for this month has already been billed.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -21,13 +21,15 @@ def require_any_perm(*perms):
     return decorator
 
 
-def require_perm(perm):
-    """Login required, a school selected, and the user's role in it must grant `perm`."""
+def require_perm(perm, all_scope=False):
+    """Login required, a school selected, and the user's role in it must grant `perm`.
+    `all_scope=True` additionally requires the permission to apply school-wide (not just to one's own classes
+    or children): used for actions on the whole school's money, like recording payments."""
 
     def decorator(view):
         @wraps(view)
         def wrapped(request, *args, **kwargs):
-            if request.school is None or not has_perm(request.user, request.school, perm):
+            if request.school is None or not has_perm(request.user, request.school, perm, all_scope=all_scope):
                 raise PermissionDenied
             return view(request, *args, **kwargs)
 

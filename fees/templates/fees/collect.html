@@ -1,0 +1,68 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Collect payment - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_collect' %}">&larr; Find another student</a></p>
+<div class="page-head">
+  <h1>{{ student.full_name }}</h1>
+  <p class="muted">{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% endif %} &middot; Adm. {{ student.admission_no }}</p>
+</div>
+
+{% if open_rows %}
+  <div class="cards cols-3 compact">
+    <div class="card stat"><div class="num">{{ account.outstanding|inr0 }}</div><div class="label">Outstanding</div></div>
+    <div class="card stat"><div class="num{% if account.overdue > 0 %} danger{% endif %}">{{ account.overdue|inr0 }}</div><div class="label">Overdue</div></div>
+    <div class="card stat"><div class="num">{{ open_rows|length }}</div><div class="label">Open invoice{{ open_rows|length|pluralize }}</div></div>
+  </div>
+
+  <h2>Open invoices <span class="muted small">(payments go to the oldest first)</span></h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Invoice</th><th>Month</th><th>Due</th><th class="num">Balance</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in open_rows %}
+          <tr>
+            <td class="nowrap"><a href="{% url 'fee_invoice' row.invoice.pk %}">{{ row.invoice.invoice_no }}</a></td>
+            <td class="nowrap">{{ row.invoice.month|date:"M Y" }}</td>
+            <td class="nowrap">{{ row.invoice.due_date|date:"j M Y" }}</td>
+            <td class="num">{{ row.balance|inr }}</td>
+            <td>{% include "fees/_status.html" with code=row.status label=row.label %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" class="card" style="margin-top:1.25rem;max-width:560px" id="payment-form">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ form.token }}">
+    <h3 style="margin-bottom:.75rem">Record payment</h3>
+    <div class="field">
+      <label for="amount">Amount received (&#8377;)</label>
+      <input type="text" id="amount" name="amount" inputmode="decimal" autocomplete="off" required value="{% if form.amount %}{{ form.amount }}{% else %}{{ account.outstanding }}{% endif %}">
+      <div class="small muted">Pre-filled with the full outstanding amount. Change it for a part payment.</div>
+    </div>
+    <div class="field">
+      <label for="method">Paid by</label>
+      <select id="method" name="method">
+        {% for code, label in methods %}<option value="{{ code }}"{% if form.method == code %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="reference">Reference <span class="muted small">(UPI transaction id, cheque number, ...)</span></label>
+      <input type="text" id="reference" name="reference" maxlength="100" value="{{ form.reference }}">
+    </div>
+    <div class="field">
+      <label for="received_on">Date received</label>
+      <input type="date" id="received_on" name="received_on" max="{{ now|date:'Y-m-d' }}" value="{{ form.received_on }}" required>
+    </div>
+    <div class="field">
+      <label for="notes">Note <span class="muted small">(optional)</span></label>
+      <input type="text" id="notes" name="notes" maxlength="200" value="{{ form.notes }}">
+    </div>
+    <button class="btn block" type="submit" id="submit-payment">Record payment</button>
+  </form>
+{% else %}
+  <div class="card empty">{{ student.first_name }} has no dues right now. <a href="{% url 'fee_student' student.pk %}">View account</a></div>
+{% endif %}
+{% endblock %}

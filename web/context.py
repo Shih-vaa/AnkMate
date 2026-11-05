@@ -12,6 +12,14 @@ _ACTIVE_NAV = {
     "attendance_register": "attendance",
     "attendance_student": "attendance",
     "fee_structure": "fees",
+    "fee_home": "fees",
+    "fee_student": "fees",
+    "fee_invoice": "fees",
+    "fee_receipt": "fees",
+    "fee_collect": "fees",
+    "fee_collect_student": "fees",
+    "fee_generate": "fees",
+    "fee_dues": "fees",
 }
 
 
@@ -43,7 +51,7 @@ def app_context(request):
     if "attendance.view" in perms or "attendance.mark" in perms:
         nav.append({"key": "attendance", "label": "Attendance", "url_name": "attendance_home"})
     if "fees.view" in perms:
-        nav.append({"key": "fees", "label": "Fees", "url_name": "fee_structure"})
+        nav.append({"key": "fees", "label": "Fees", "url_name": "fee_home"})
 
     match = getattr(request, "resolver_match", None)
     ctx.update(

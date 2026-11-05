@@ -1,0 +1,68 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Invoice {{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+<p class="small noprint"><a href="{% url 'fee_student' student.pk %}">&larr; {{ student.full_name }}</a></p>
+
+<article class="doc card">
+  <header class="doc-head">
+    <div>
+      <div class="doc-school">{{ school.name }}</div>
+      <div class="muted small">{{ school.address }}{% if school.city %}, {{ school.city }}{% endif %}</div>
+    </div>
+    <div class="doc-title">
+      <strong>FEE INVOICE</strong>
+      <div>{{ invoice.invoice_no }}</div>
+      {% include "fees/_status.html" with code=status_code label=status_label %}
+    </div>
+  </header>
+
+  <dl class="facts doc-facts">
+    <dt>Student</dt><dd>{{ student.full_name }} (Adm. {{ student.admission_no }})</dd>
+    <dt>Class</dt><dd>{% if student.cur_grade %}{{ student.cur_grade }}-{{ student.cur_section }}{% else %}-{% endif %}</dd>
+    <dt>Billing month</dt><dd>{{ invoice.month|date:"F Y" }} &middot; Session {{ invoice.academic_year.name }}</dd>
+    <dt>Due date</dt><dd>{{ invoice.due_date|date:"j F Y" }}</dd>
+  </dl>
+
+  <table class="table doc-table">
+    <thead><tr><th>Description</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for line in lines %}
+        <tr><td>{{ line.description }}</td><td class="num{% if line.amount < 0 %} credit{% endif %}">{{ line.amount|inr }}</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td><strong>Invoice total</strong></td><td class="num"><strong>{{ invoice.total|inr }}</strong></td></tr>
+      <tr><td>Paid</td><td class="num">{{ paid|inr }}</td></tr>
+      <tr><td><strong>Balance due</strong></td><td class="num"><strong>{{ balance|inr }}</strong></td></tr>
+    </tfoot>
+  </table>
+
+  {% if invoice.status == "cancelled" %}
+    <div class="notice">Cancelled{% if invoice.cancelled_at %} on {{ invoice.cancelled_at|date:"j M Y" }}{% endif %}: {{ invoice.cancel_reason }}</div>
+  {% endif %}
+
+  {% if allocations %}
+    <h3 style="margin-top:1.25rem">Payments applied</h3>
+    <ul class="plain">
+      {% for a in allocations %}
+        <li>{{ a.payment.received_on|date:"j M Y" }} &middot; <a href="{% url 'fee_receipt' a.payment.pk %}">{{ a.payment.receipt_no }}</a> &middot; {{ a.amount|inr }}{% if a.payment.status == "reversed" %} <span class="badge s-cancelled">Reversed</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</article>
+
+<div class="actions noprint">
+  <button class="btn secondary" type="button" onclick="window.print()">Print</button>
+</div>
+
+{% if can_cancel %}
+  <form method="post" action="{% url 'fee_invoice_cancel' invoice.pk %}" class="card noprint" style="margin-top:1rem;max-width:520px">
+    {% csrf_token %}
+    <h3>Cancel this invoice</h3>
+    <p class="small muted">Only possible while nothing has been paid against it. You can generate it again afterwards.</p>
+    <div class="field"><label for="reason">Reason</label><input type="text" id="reason" name="reason" maxlength="200" required></div>
+    <button class="btn secondary" type="submit">Cancel invoice</button>
+  </form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Collect payment{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_home' %}">&larr; Fees</a></p>
+<div class="page-head">
+  <h1>Collect payment</h1>
+  <p class="muted">Find the student first.</p>
+</div>
+
+<form method="get" class="toolbar" role="search" style="grid-template-columns:1fr auto">
+  <div>
+    <label for="q">Student name or admission number</label>
+    <input type="search" id="q" name="q" value="{{ q }}" autofocus>
+  </div>
+  <button class="btn" type="submit">Search</button>
+</form>
+
+{% if q %}
+  {% if results %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Student</th><th>Class</th><th>Adm. no.</th><th class="num">Outstanding</th><th></th></tr></thead>
+        <tbody>
+          {% for s in results %}
+            <tr>
+              <td>{{ s.full_name }}</td>
+              <td>{% if s.cur_grade %}{{ s.cur_grade }}-{{ s.cur_section }}{% else %}-{% endif %}</td>
+              <td>{{ s.admission_no }}</td>
+              <td class="num">{{ s.fee.outstanding|inr }}</td>
+              <td class="num">{% if s.fee.outstanding > 0 %}<a class="btn" href="{% url 'fee_collect_student' s.pk %}">Collect</a>{% else %}<a class="btn secondary" href="{% url 'fee_student' s.pk %}">Account</a>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty">No student matches "{{ q }}".</div>
+  {% endif %}
+{% endif %}
+{% endblock %}

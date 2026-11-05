@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Fee dues{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_home' %}">&larr; Fees</a></p>
+<div class="page-head">
+  <h1>Fee dues</h1>
+  <p class="muted">{{ rows|length }} student{{ rows|length|pluralize }} &middot; {{ total_outstanding|inr0 }} outstanding{% if total_overdue > 0 %} &middot; {{ total_overdue|inr0 }} overdue{% endif %}</p>
+</div>
+
+<form method="get" class="toolbar" style="grid-template-columns:1fr auto auto;align-items:end">
+  <div>
+    <label for="grade">Class</label>
+    <select id="grade" name="grade">
+      <option value="">All classes</option>
+      {% for g in grades %}<option value="{{ g.pk }}"{% if grade_id == g.pk %} selected{% endif %}>{{ g.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <label class="check"><input type="checkbox" name="overdue" value="1"{% if overdue_only %} checked{% endif %}> Overdue only</label>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+{% if rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Student</th><th>Class</th><th>Oldest due</th><th class="num">Overdue</th><th class="num">Outstanding</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td><a href="{% url 'fee_student' r.student.pk %}">{{ r.student.full_name }}</a><div class="muted small">Adm. {{ r.student.admission_no }}</div></td>
+            <td>{{ r.class_label }}</td>
+            <td>{{ r.oldest_due|date:"j M Y" }}</td>
+            <td class="num{% if r.overdue > 0 %} danger{% endif %}">{{ r.overdue|inr }}</td>
+            <td class="num"><strong>{{ r.outstanding|inr }}</strong></td>
+            <td class="num"><a class="btn secondary" href="{% url 'fee_collect_student' r.student.pk %}">Collect</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:1rem"><a class="btn secondary" href="?{% if grade_id %}grade={{ grade_id }}&amp;{% endif %}{% if overdue_only %}overdue=1&amp;{% endif %}format=csv">Download as spreadsheet (CSV)</a></p>
+{% else %}
+  <div class="card empty">No dues{% if overdue_only %} overdue{% endif %}. Everything has been paid.</div>
+{% endif %}
+{% endblock %}

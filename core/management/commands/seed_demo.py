@@ -144,9 +144,13 @@ class Command(BaseCommand):
 
         from attendance.demo import seed_attendance
 
+        from fees.demo import seed_fees
+
         attendance_count = seed_attendance(school)
+        fee_counts = seed_fees(school)
         self.stdout.write(self.style.SUCCESS(f"Seeded {school.name} ({school.board}), session {year.name}."))
         self.stdout.write(f"  {attendance_count} attendance records.")
+        self.stdout.write(f"  {fee_counts['invoices']} invoices, {fee_counts['payments']} payments, {fee_counts['concessions']} concessions.")
         self.stdout.write(
             f"  {Staff.objects.filter(school=school).count()} staff, {Student.objects.filter(school=school).count()} students, "
             f"{Guardian.objects.filter(school=school).count()} guardians, {Section.objects.filter(school=school).count()} sections."
