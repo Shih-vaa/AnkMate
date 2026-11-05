@@ -4,12 +4,13 @@ School management for one school today, many schools tomorrow: students, parents
 fee structure, with role-based access. One installable web app (PWA) that works as a desktop
 dashboard for teachers/office and as a phone app for parents and students.
 
-**Status: foundation + attendance + fees + demo.** Done: multi-school core, users/roles/scoped
+**Status: foundation + attendance + fees + marks + demo.** Done: multi-school core, users/roles/scoped
 permissions, academic structure, people records, ICSE preset, daily attendance (marking, parent and
 student views, class registers), fee structure, monthly invoices, concessions, payments with receipts,
-reversals, dues list, responsive PWA shell, tests.
-Not yet: online payment (gateway), marks/report cards, notices, absence and fee reminders to parents,
-late fines, bulk import.
+reversals, dues list, exams and marks entry, class marksheets with analysis, student progress pages,
+printable report cards, responsive PWA shell, tests.
+Not yet: online payment (gateway), notices, absence and fee reminders to parents, late fines, bulk import,
+class ranks, an audit log of mark changes.
 
 ## Run it
 
@@ -17,13 +18,13 @@ late fines, bulk import.
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_demo      # fake Maple Grove School (ICSE) data + attendance + fee history
+.venv/bin/python manage.py seed_demo      # fake Maple Grove School (ICSE) data + attendance + fee + marks history
 .venv/bin/python manage.py runserver
-.venv/bin/python manage.py test           # 269 tests
+.venv/bin/python manage.py test           # 369 tests
 ```
 
 If you already have a demo database from before attendance existed, run `manage.py migrate` and then
-`manage.py seed_attendance` (add `--reset` to regenerate). The same goes for fees: `manage.py seed_fees` (`--reset` to regenerate).
+`manage.py seed_attendance` (add `--reset` to regenerate). The same goes for fees (`manage.py seed_fees`) and marks (`manage.py seed_marks`); each takes `--reset` to regenerate.
 
 Open http://localhost:8000/ . On a phone on the same Wi-Fi, run
 `runserver 0.0.0.0:8000` and add that host to `DJANGO_ALLOWED_HOSTS`.
@@ -53,6 +54,7 @@ Create a platform owner with `manage.py createsuperuser` to manage schools and u
 | `people` | `Student`, `Guardian`, `Staff`, `StudentGuardian` |
 | `academics` | `AcademicYear`, `Grade`, `Section`, `Subject`, `Enrollment` (per year), `TeachingAssignment` |
 | `attendance` | `AttendanceRecord` (one per student per day), `Holiday`, the rules in `services.py`, marking/calendar/register screens |
+| `assessments` | `Exam`, `ExamPaper` (max marks per exam/class/subject), `Mark`, `GradeBand`, `ReportRemark`, the rules in `services.py`, entry/marksheet/progress/report-card screens |
 | `fees` | `FeeHead`, `FeeStructure`, `Concession`, `FeeInvoice` (+ lines), `Payment` (+ allocations), number sequences, the billing and payment rules in `services.py` |
 | `web` | pages, templates, stylesheet, PWA manifest + service worker |
 
@@ -118,6 +120,43 @@ completed payments, so they cannot drift out of step.
 Amounts are exact decimals everywhere (never floats), shown with Indian digit grouping (₹12,34,567.50).
 Use PostgreSQL for real data: it locks rows properly when two people take payments at once.
 
+### Marks and report cards: how it works
+
+**Exam structure is data.** A school defines its exams for the year (`Exam`: name, order, and its *weightage*: how
+much it counts towards the final result, in percent), the maximum marks of each paper (`ExamPaper`: one per exam,
+class and subject) and its grade scale (`GradeBand`). The ICSE preset loads a *placeholder* structure (Unit Test 1,
+Half-Yearly, Unit Test 2, Annual weighted 10/30/10/50) and a placeholder grade scale (A1 from 91% ... E below 33%);
+**verify all of it with the school**. They are edited in *Manage data*. The pass mark is
+`School.settings["pass_percent"]` (default 33).
+
+**Entering marks.** A teacher enters marks only for a class and subject they are assigned to teach (their
+`TeachingAssignment`); being class teacher alone is not enough. The principal can enter or correct any paper.
+A blank box means "not entered yet", `AB` means absent, and the two are never confused with zero. Invalid entries
+(over the maximum, negative, not a number) save nothing and point at the student. Every mark records who entered it
+and when.
+
+**Draft, published, locked.** Marks are invisible to parents and students until the principal *publishes* the exam
+(*Marks > Manage exams*). After publishing, teachers can no longer change marks; the principal still can, until the
+exam is *locked*, after which nobody can. Hiding a published exam again is possible until it is locked. A teacher who
+is also a parent never sees unpublished marks of their own child this way: drafts are only visible for students in
+the staff member's own classes.
+
+**How a result is worked out.** A subject's result is the weighted percentage over the exams that have a result for
+that student: `sum(marks / max * weightage) / sum(weightage) * 100`. Exams not held or not entered yet are left out
+(so mid-year figures are "so far"); an absence counts as zero for that exam. Percentages are rounded to one decimal
+first, and grade and pass/fail use that rounded figure, so the printed number always agrees with the decision. The
+overall percentage is the plain average of the subject percentages; subjects marked *optional* are shown but left out.
+
+| Who | Can |
+|---|---|
+| Parent, student | see published results, progress and report card of their own children / themselves |
+| Teacher | enter marks for their own class and subject until published; see class marksheets, analysis and drafts for classes they teach; write the class remark if they are the class teacher |
+| Principal | everything above for any class, plus publish, hide, lock, and define exams in the admin |
+
+The report card (printable) shows the school, student, marks per exam with weightage, final percentage and grade,
+the result, attendance for the session, the class teacher's remark and the grade scale. Staff can preview it with
+unpublished marks; parents never can.
+
 ### Adding another school or board
 
 1. Write a preset like `core/presets/icse.py` (grades, subjects, fee heads) and register it in `core/presets/loader.py`.
@@ -131,6 +170,7 @@ Use PostgreSQL for real data: it locks rows properly when two people take paymen
 - Serve static files with hashed filenames (WhiteNoise `CompressedManifestStaticFilesStorage`), so a changed stylesheet is never served stale by the service worker.
 - Online payment: needs a payment-gateway account in the *school's* name (money must settle into the school's bank account, never yours). `Payment.method = "online"` and the idempotency key are already in place for it.
 - Fee reminders and absence alerts to parents (SMS/WhatsApp), and a decision on who pays for those messages.
+- Marks: confirm the exam structure, weightages, pass mark and grade scale with the school (and whether non-scholastic subjects like Art or PE are graded rather than marked); class ranks and an audit trail of every mark change are not built yet.
 - Late fines, receipt PDFs/GST needs if the school requires them, and a financial year-end/closing process (confirm with the school's accountant).
 - Password reset flow (SMS/WhatsApp cost decisions), rate limiting on login.
 - Backups, an audit log of who changed what, and a written data agreement with the school.

@@ -3,8 +3,9 @@
 This is only DATA that gets loaded into the database. A CBSE or government-school preset is
 another file of the same shape. After loading, the school can edit everything in the admin.
 
-NOTE: the class list, subject lists and ALL fee amounts below are placeholders for the demo.
-Verify with the school before real use (their own class range, subjects offered, and fees).
+NOTE: the class list, subject lists, ALL fee amounts, the exam structure and the grade scale below are
+placeholders for the demo. Verify with the school before real use (their own class range, subjects offered,
+fees, which exams they hold and how much each counts, and their grade scale).
 """
 from decimal import Decimal
 
@@ -68,6 +69,16 @@ PRESET = {
         ("EXAM", "Examination Fee"),
     ],
     # DUMMY amounts in rupees: stage -> [(head code, amount, frequency)]
+    # Placeholder grade scale: (label, minimum percentage). The school edits it in the admin.
+    "grade_bands": [("A1", 91), ("A2", 81), ("B1", 71), ("B2", 61), ("C1", 51), ("C2", 41), ("D", 33), ("E", 0)],
+    # Placeholder exam structure. `weightage` = share of the final result (percent); `max_marks` = default paper
+    # maximum; `starts` = (month, day), in the calendar year the session reaches that month.
+    "exams": [
+        {"name": "Unit Test 1", "order": 1, "weightage": 10, "max_marks": 25, "starts": (7, 20)},
+        {"name": "Half-Yearly", "order": 2, "weightage": 30, "max_marks": 100, "starts": (9, 21)},
+        {"name": "Unit Test 2", "order": 3, "weightage": 10, "max_marks": 25, "starts": (11, 2)},
+        {"name": "Annual", "order": 4, "weightage": 50, "max_marks": 100, "starts": (3, 1)},
+    ],
     "fees_by_stage": {
         "Pre-primary": [("ADM", Decimal("10000"), "one_time"), ("ANN", Decimal("5000"), "annual"), ("TUI", Decimal("1800"), "monthly")],
         "Primary": [

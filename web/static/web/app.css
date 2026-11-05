@@ -322,3 +322,26 @@ ul.plain { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: 
 
 /* card lists on phones keep their spacing (a later .show-sm rule had flattened the grid gap) */
 @media (max-width: 899px) { .rows.show-sm { display: grid; } }
+
+/* ---- marks ------------------------------------------------------------------------------ */
+.mark-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .7rem .9rem; }
+.mark-row.has-error { border-color: var(--danger); }
+.mark-input { display: flex; align-items: center; gap: .5rem; }
+.mark-input input[type=text] { width: 6.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.mark-input .check { min-height: 44px; }
+.field-error { width: 100%; color: var(--danger); font-size: .875rem; }
+.bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: .35rem 0 .6rem; }
+.bar > span { display: block; height: 100%; background: var(--st-P); border-radius: 999px; }
+.bar > span.low { background: var(--st-A); }
+.exam-lines li { display: flex; justify-content: space-between; gap: .75rem; font-size: .9rem; }
+.marksheet th.num, .marksheet td.num { white-space: nowrap; }
+.marksheet .sticky-col { position: sticky; left: 0; background: var(--surface); z-index: 1; min-width: 150px; }
+.marksheet thead .sticky-col { background: var(--surface-2); }
+.report .remark { margin: 1rem 0 .5rem; padding: .6rem .8rem; border: 1px dashed var(--border); border-radius: 10px; min-height: 4rem; }
+.report .remark p { margin: .25rem 0 0; }
+.report { max-width: 860px; }
+.signatures { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; font-size: .85rem; color: var(--muted); }
+.signatures span { flex: 1; text-align: center; padding-top: .4rem; border-top: 1px solid var(--border); }
+.paper-form { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid var(--border); }
+.inline-form { display: flex; gap: .5rem; align-items: center; margin-top: .25rem; }
+.actions form { display: inline; }

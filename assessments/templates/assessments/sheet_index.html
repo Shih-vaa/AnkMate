@@ -1,0 +1,14 @@
+{% extends "web/base.html" %}
+{% block title %}Class results - {{ exam.name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_home' %}">&larr; Marks</a></p>
+<div class="page-head">
+  <h1>{{ exam.name }}: class results</h1>
+  <p class="muted">Choose a class.</p>
+</div>
+<div class="cards cols-4 compact">
+  {% for s in sections %}
+    <a class="card" href="{% url 'marks_sheet' exam.pk s.pk %}" style="color:inherit"><h3>{{ s }}</h3></a>
+  {% endfor %}
+</div>
+{% endblock %}

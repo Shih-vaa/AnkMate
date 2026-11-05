@@ -1,0 +1,70 @@
+{% extends "web/base.html" %}
+{% block title %}{{ exam.name }} - {{ section }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_sheet_index' exam.pk %}">&larr; {{ exam.name }}: all classes</a></p>
+<div class="page-head">
+  <h1>{{ section }} &middot; {{ exam.name }}</h1>
+  <p class="muted">{{ sheet.students }} student{{ sheet.students|pluralize }}{% if section.class_teacher %} &middot; Class teacher: {{ section.class_teacher.full_name }}{% endif %}
+    {% if not exam.is_published %}<span class="badge s-partial">Draft: parents can't see this yet</span>{% endif %}</p>
+</div>
+
+{% if not sheet.papers %}
+  <div class="card empty">This exam has no papers for this class yet.</div>
+{% else %}
+  <div class="table-wrap">
+    <table class="table marksheet">
+      <thead>
+        <tr>
+          <th class="sticky-col">Student</th>
+          <th class="num">Total</th><th class="num">%</th><th>Grade</th>
+          {% for p in sheet.papers %}<th class="num" title="{{ p.subject.name }}">{{ p.subject.name|truncatechars:12 }}<br><span class="wd">/{{ p.max_marks|floatformat:"-2" }}</span></th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in sheet.rows %}
+          <tr>
+            <td class="sticky-col"><a href="{% url 'marks_student' r.student.pk %}">{{ r.student.full_name }}</a><div class="muted small">Roll {{ r.roll_no|default:"-" }}</div></td>
+            <td class="num">{% if r.maximum %}{{ r.obtained|floatformat:"-2" }}/{{ r.maximum|floatformat:"-2" }}{% else %}-{% endif %}</td>
+            <td class="num{% if r.percent is not None and r.percent < sheet.pass_percent %} danger{% endif %}"><strong>{% if r.percent is None %}-{% else %}{{ r.percent|floatformat:"-1" }}{% endif %}</strong></td>
+            <td>{{ r.grade }}</td>
+            {% for c in r.cells %}
+              <td class="num{% if c.failed %} danger{% endif %}">{% if c.state == "result" %}{{ c.marks|floatformat:"-2" }}{% elif c.state == "absent" %}<span class="badge s-cancelled">AB</span>{% else %}<span class="muted">&middot;</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:.5rem">A dot means not entered yet. Red = below the pass mark ({{ sheet.pass_percent|floatformat:"-1" }}%). AB = absent.</p>
+
+  <h2>Subject analysis</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Subject</th><th class="num">Entered</th><th class="num">Average</th><th class="num">Highest</th><th class="num">Lowest</th><th class="num">Pass rate</th><th>Grades</th></tr></thead>
+      <tbody>
+        {% for s in sheet.subject_stats %}
+          <tr>
+            <td>{{ s.paper.subject.name }}</td>
+            <td class="num">{{ s.entered }}/{{ sheet.students }}{% if s.absent %} <span class="muted small">({{ s.absent }} AB)</span>{% endif %}</td>
+            <td class="num">{% if s.average is None %}-{% else %}{{ s.average|floatformat:"-1" }}%{% endif %}</td>
+            <td class="num">{% if s.highest is None %}-{% else %}{{ s.highest|floatformat:"-1" }}%{% endif %}</td>
+            <td class="num">{% if s.lowest is None %}-{% else %}{{ s.lowest|floatformat:"-1" }}%{% endif %}</td>
+            <td class="num">{% if s.pass_rate is None %}-{% else %}{{ s.pass_rate|floatformat:"-1" }}%{% endif %}</td>
+            <td class="small">{% for label, n in s.grades %}{{ label }}: {{ n }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if sheet.needs_attention %}
+    <h2>Needs attention</h2>
+    <p class="small muted">Students whose overall percentage in this exam is below the pass mark.</p>
+    <ul class="plain">
+      {% for r in sheet.needs_attention %}
+        <li><a href="{% url 'marks_student' r.student.pk %}">{{ r.student.full_name }}</a> &middot; {{ r.percent|floatformat:"-1" }}%</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "web/base.html" %}
+{% block title %}Manage exams{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_home' %}">&larr; Marks</a></p>
+<div class="page-head">
+  <h1>Manage exams</h1>
+  <p class="muted">{% if year %}Academic year {{ year.name }}. Publishing makes results visible to parents and students.{% else %}No current academic year is set.{% endif %}</p>
+</div>
+
+{% if rows %}
+  {% if total_weight != 100 %}<div class="notice" style="margin-bottom:1rem">The exam weightages add up to <strong>{{ total_weight|floatformat:"-1" }}%</strong>, not 100%. Final results are scaled to the exams held, but you may want to correct this in the admin site.</div>{% endif %}
+  <div class="cards">
+    {% for r in rows %}
+      <div class="card">
+        <div class="inv-line"><h3>{{ r.exam.name }}</h3>
+          {% if r.exam.is_locked %}<span class="badge s-cancelled">Locked</span>{% elif r.exam.is_published %}<span class="badge s-paid">Published</span>{% else %}<span class="badge s-partial">Draft</span>{% endif %}
+        </div>
+        <div class="muted small">{{ r.exam.weightage|floatformat:"-1" }}% of the final result{% if r.exam.starts_on %} &middot; starts {{ r.exam.starts_on|date:"j M Y" }}{% endif %}</div>
+        <div style="margin-top:.5rem">
+          {{ r.progress.papers }} paper{{ r.progress.papers|pluralize }} &middot; marks entered: <strong>{{ r.progress.entered }}</strong> of {{ r.progress.expected }}
+          {% if r.progress.expected and r.progress.entered == r.progress.expected %}<span class="badge s-paid">Complete</span>{% endif %}
+        </div>
+        <div class="actions">
+          {% if not r.exam.is_locked %}
+            {% if r.exam.is_published %}
+              <form method="post" action="{% url 'marks_exam_action' r.exam.pk 'unpublish' %}">{% csrf_token %}<button class="btn secondary" type="submit">Hide from parents</button></form>
+              <form method="post" action="{% url 'marks_exam_action' r.exam.pk 'lock' %}" onsubmit="return confirm('Lock {{ r.exam.name|escapejs }}? Nobody will be able to change its marks after this.');">{% csrf_token %}<button class="btn secondary" type="submit">Lock</button></form>
+            {% else %}
+              <form method="post" action="{% url 'marks_exam_action' r.exam.pk 'publish' %}" {% if r.progress.entered < r.progress.expected %}onsubmit="return confirm('Marks are not all entered yet ({{ r.progress.entered }} of {{ r.progress.expected }}). Publish anyway?');"{% endif %}>{% csrf_token %}<button class="btn" type="submit">Publish results</button></form>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% if not r.exam.is_locked %}
+          <form method="post" action="{% url 'marks_exam_action' r.exam.pk 'papers' %}" class="paper-form">
+            {% csrf_token %}
+            <label for="max{{ r.exam.pk }}" class="small">Add missing papers (maximum marks)</label>
+            <div class="inline-form"><input type="text" id="max{{ r.exam.pk }}" name="max_marks" inputmode="decimal" placeholder="e.g. 100" style="max-width:8rem"><button class="btn secondary" type="submit">Create papers</button></div>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <p class="small muted" style="margin-top:1rem">Exams, their weightage, per-paper maximum marks and the grade scale are edited in <a href="{% url 'admin:index' %}">Manage data</a>.</p>
+{% else %}
+  <div class="card empty">No exams are set up for this year yet. Add them in <a href="{% url 'admin:index' %}">Manage data</a>.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block title %}Marks - {{ subject.name }} {{ section }}{% endblock %}
+{% block extra_head %}<script src="{% static 'assessments/enter.js' %}" defer></script>{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_entry_index' exam.pk %}">&larr; {{ exam.name }}</a></p>
+<div class="page-head">
+  <h1>{{ subject.name }} &middot; {{ section }}</h1>
+  <p class="muted">{{ exam.name }} &middot; out of <strong>{{ paper.max_marks|floatformat:"-2" }}</strong>
+    {% if exam.is_locked %}<span class="badge s-cancelled">Locked</span>{% elif exam.is_published %}<span class="badge s-paid">Published</span>{% else %}<span class="badge s-partial">Draft</span>{% endif %}
+  </p>
+</div>
+
+{% if blocked_reason %}
+  <div class="notice">{{ blocked_reason }} You can look, but not change anything.</div>
+{% else %}
+  <div class="notice">Type each student's marks. Leave a box <strong>empty</strong> if the paper hasn't been marked yet; tick <strong>AB</strong> (or type AB) for absent. Half marks like 17.5 are fine.</div>
+{% endif %}
+
+{% if rows %}
+<form method="post" id="marks-form" data-max="{{ paper.max_marks|floatformat:'-2' }}" style="margin-top:1rem">
+  {% csrf_token %}
+  <p class="small muted"><span id="progress" data-saved="{{ entered }}">{{ entered }} of {{ total }} saved</span></p>
+  <ul class="rows">
+    {% for row in rows %}
+      <li class="card mark-row{% if row.error %} has-error{% endif %}">
+        <div class="who">
+          <strong>{{ row.student.full_name }}</strong>
+          <div class="muted small">Roll {{ row.roll_no|default:"-" }} &middot; Adm. {{ row.student.admission_no }}</div>
+        </div>
+        <div class="mark-input">
+          <label class="sr-only" for="m{{ row.student.pk }}">Marks for {{ row.student.full_name }}</label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="m{{ row.student.pk }}" name="m_{{ row.student.pk }}" value="{{ row.value }}"{% if row.absent %} disabled{% endif %}{% if not editable %} readonly{% endif %} aria-invalid="{% if row.error %}true{% else %}false{% endif %}">
+          <span class="muted small nowrap">/ {{ paper.max_marks|floatformat:"-2" }}</span>
+          <label class="check"><input type="checkbox" name="ab_{{ row.student.pk }}" data-for="m{{ row.student.pk }}"{% if row.absent %} checked{% endif %}{% if not editable %} disabled{% endif %}> AB</label>
+        </div>
+        {% if row.error %}<div class="field-error" role="alert">{{ row.error }}</div>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% if editable %}<div class="sticky-save"><button class="btn block" type="submit">Save marks</button></div>{% endif %}
+</form>
+{% else %}
+  <div class="card empty">No students are enrolled in this class.</div>
+{% endif %}
+{% endblock %}

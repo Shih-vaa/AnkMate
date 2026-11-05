@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% block title %}Enter marks - {{ exam.name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marks_home' %}">&larr; Marks</a></p>
+<div class="page-head">
+  <h1>{{ exam.name }}</h1>
+  <p class="muted">Choose a class and subject to enter marks.
+    {% if exam.is_locked %}<span class="badge s-cancelled">Locked</span>{% elif exam.is_published %}<span class="badge s-paid">Published</span>{% else %}<span class="badge s-partial">Draft</span>{% endif %}
+  </p>
+</div>
+
+{% if targets %}
+  <div class="table-wrap hide-sm">
+    <table class="table">
+      <thead><tr><th>Class</th><th>Subject</th><th class="num">Out of</th><th>Entered</th><th></th></tr></thead>
+      <tbody>
+        {% for t in targets %}
+          <tr>
+            <td class="nowrap"><strong>{{ t.section }}</strong></td>
+            <td>{{ t.subject.name }}</td>
+            <td class="num">{{ t.paper.max_marks|floatformat:"-2" }}</td>
+            <td>{{ t.entered }} of {{ t.total }}{% if t.entered == t.total and t.total %} <span class="badge s-paid">Done</span>{% endif %}</td>
+            <td class="num"><a class="btn{% if not t.editable %} secondary{% endif %}" href="{% url 'marks_enter' exam.pk t.section.pk t.subject.pk %}">{% if t.editable %}Enter{% else %}View{% endif %}</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <ul class="rows show-sm">
+    {% for t in targets %}
+      <li><a class="card inv-row" href="{% url 'marks_enter' exam.pk t.section.pk t.subject.pk %}">
+        <div class="inv-line"><strong>{{ t.section }} &middot; {{ t.subject.name }}</strong>{% if t.entered == t.total and t.total %}<span class="badge s-paid">Done</span>{% endif %}</div>
+        <div class="muted small">Out of {{ t.paper.max_marks|floatformat:"-2" }} &middot; {{ t.entered }} of {{ t.total }} entered{% if not t.editable %} &middot; read only{% endif %}</div>
+      </a></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="card empty">You aren't assigned to teach any subject that has a paper in this exam.</div>
+{% endif %}
+{% endblock %}
