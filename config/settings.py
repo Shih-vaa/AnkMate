@@ -36,6 +36,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "accounts.middleware.SchoolMiddleware",  # sets request.school (must follow auth)
+    "accounts.middleware.PasswordChangeRequiredMiddleware",  # temporary passwords must be replaced first
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -77,6 +78,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Sign-in lockout: after this many wrong passwords for the same account from the same address (or three times as
+# many for the same account from anywhere), sign-in is refused for a while. The counters live in Django's cache; the
+# default per-process cache is fine for one server, but set a shared cache (Redis, database) when running several.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"

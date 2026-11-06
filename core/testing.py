@@ -9,6 +9,7 @@ School B "Beta": one student, Zoya, with her own parent and admin.
 from datetime import date
 from decimal import Decimal
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from academics.models import AcademicYear, Enrollment, Grade, Section, Subject, TeachingAssignment
@@ -121,6 +122,10 @@ class WorldTestCase(TestCase):
             FeeStructure.objects.create(
                 school=cls.school_a, academic_year=cls.year_a, grade=grade, head=head, amount=Decimal(amount), frequency="monthly"
             )
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()  # the sign-in lockout counts attempts in the cache: every test starts with a clean slate
 
     def admission_nos(self, queryset):
         return set(queryset.values_list("admission_no", flat=True))

@@ -18,7 +18,8 @@
     </nav>
     <div class="whoami">
       <strong>{{ user.get_full_name|default:user.username }}</strong><br>
-      <span class="muted">{{ role_names|join:", " }}</span>
+      <span class="muted">{{ role_names|join:", " }}</span><br>
+      <a class="small" href="{% url 'password_change' %}">Change password</a>
       <form method="post" action="{% url 'logout' %}" style="margin-top:.5rem">{% csrf_token %}
         <button class="linklike small" type="submit">Log out</button>
       </form>
@@ -31,9 +32,12 @@
         <span class="brand-name">{{ PRODUCT_NAME }}</span>
         <span class="school-name">{{ school.name }}</span>
       </div>
-      <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-        <button class="linklike small" type="submit" style="color:inherit">Log out</button>
-      </form>
+      <div class="topbar-links">
+        <a class="small" href="{% url 'password_change' %}" style="color:inherit">Password</a>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+          <button class="linklike small" type="submit" style="color:inherit">Log out</button>
+        </form>
+      </div>
     </header>
 
     <main class="page">

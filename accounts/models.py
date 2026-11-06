@@ -19,6 +19,8 @@ class User(AbstractUser):
     """One account per human. What they can do in a school comes from their Memberships."""
 
     phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    # True while the person is still using a temporary password the school office gave them.
+    must_change_password = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         self.phone = normalize_phone(self.phone) or None
