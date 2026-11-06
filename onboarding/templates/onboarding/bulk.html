@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% block title %}Create logins - {{ heading }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'setup_home' %}">&larr; People &amp; logins</a></p>
+<div class="page-head">
+  <h1>Create logins: {{ heading }}</h1>
+  <p class="muted">Everyone below who doesn't have a login yet gets one, with a temporary password on a printable slip.</p>
+</div>
+
+{% if kind == "student" %}
+  <form method="get" class="toolbar" style="grid-template-columns:1fr auto;max-width:480px">
+    <div>
+      <label for="grade">Only this class</label>
+      <select id="grade" name="grade"><option value="">All classes</option>{% for g in grades %}<option value="{{ g.pk }}"{% if grade_id == g.pk|stringformat:"s" %} selected{% endif %}>{{ g.name }}</option>{% endfor %}</select>
+    </div>
+    <button class="btn secondary" type="submit">Show</button>
+  </form>
+{% endif %}
+
+<div class="card" style="max-width:520px">
+  <div class="pcts" style="margin-top:0"><div><span class="pct">{{ count }}</span><span class="muted small">{{ heading|lower }} without a login</span></div></div>
+  {% if over_limit %}<p class="small muted" style="margin-top:.75rem">Only the first {{ count }} are done at once. Run it again for the rest.</p>{% endif %}
+  {% if no_phone %}<p class="small" style="margin-top:.75rem"><strong>{{ no_phone }}</strong> {{ no_phone|pluralize:"has,have" }} no valid phone number and will be skipped: parents sign in with their phone number.</p>{% endif %}
+  {% if count %}
+    <form method="post" style="margin-top:1rem">
+      {% csrf_token %}
+      {% if kind == "student" %}<input type="hidden" name="grade" value="{{ grade_id }}">{% endif %}
+      {% if kind == "staff" %}
+        <div class="field">
+          <label for="role">Role for all of them</label>
+          <select id="role" name="role" required><option value="">Choose a role...</option>{% for r in staff_roles %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}</select>
+        </div>
+      {% endif %}
+      <button class="btn block" type="submit">Create {{ count }} login{{ count|pluralize }}</button>
+    </form>
+    <p class="small muted" style="margin-top:.75rem">Phone numbers that already have a login are linked to it instead of getting a second one.</p>
+  {% else %}
+    <p class="muted" style="margin-top:.75rem">Everyone already has a login.</p>
+  {% endif %}
+</div>
+{% endblock %}

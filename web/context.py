@@ -19,6 +19,11 @@ _ACTIVE_NAV = {
     "marks_sheet": "marks",
     "marks_student": "marks",
     "marks_report": "marks",
+    "setup_home": "setup",
+    "setup_people": "setup",
+    "setup_bulk": "setup",
+    "setup_import": "setup",
+    "setup_import_preview": "setup",
     "fee_structure": "fees",
     "fee_home": "fees",
     "fee_student": "fees",
@@ -62,6 +67,9 @@ def app_context(request):
         nav.append({"key": "marks", "label": "Marks", "url_name": "marks_home"})
     if "fees.view" in perms:
         nav.append({"key": "fees", "label": "Fees", "url_name": "fee_home"})
+
+    if permissions_for(user, school, all_scope=True) & {"students.manage", "staff.manage"}:
+        nav.append({"key": "setup", "label": "People & logins", "url_name": "setup_home"})
 
     match = getattr(request, "resolver_match", None)
     ctx.update(

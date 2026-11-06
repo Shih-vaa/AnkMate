@@ -345,3 +345,26 @@ ul.plain { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: 
 .paper-form { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid var(--border); }
 .inline-form { display: flex; gap: .5rem; align-items: center; margin-top: .25rem; }
 .actions form { display: inline; }
+
+/* ---- accounts ---------------------------------------------------------------------------- */
+.topbar-links { display: flex; align-items: center; gap: 1rem; }
+.topbar-links form { margin: 0; }
+
+/* ---- people & logins ---------------------------------------------------------------------- */
+form.inline { display: inline; }
+.actions-cell { white-space: nowrap; }
+.actions-cell form { margin-left: .25rem; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.slips { display: grid; gap: .85rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .slips { grid-template-columns: repeat(2, 1fr); } }
+.slip { border: 2px dashed var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; background: var(--surface); break-inside: avoid; page-break-inside: avoid; }
+.slip-school { font-weight: 700; color: var(--primary); }
+.slip-title { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: .5rem; }
+.slip-name { font-size: 1.15rem; font-weight: 700; }
+.slip-meta { color: var(--muted); font-size: .9rem; margin-bottom: .6rem; }
+.slip-facts { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; font-size: .9rem; }
+.slip-facts dt { color: var(--muted); }
+.slip-facts dd { margin: 0; word-break: break-all; }
+.slip-facts .big { font-size: 1.35rem; font-weight: 700; letter-spacing: .04em; }
+.slip-note { margin: .6rem 0 0; font-size: .8rem; color: var(--muted); }
+@media print { .slips { grid-template-columns: repeat(2, 1fr); gap: .5rem; } .slip { border-color: #000; background: #fff !important; } }
