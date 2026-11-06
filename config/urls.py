@@ -10,6 +10,7 @@ urlpatterns = [
     path("account/", include("accounts.urls")),
     path("attendance/", include("attendance.urls")),
     path("marks/", include("assessments.urls")),
+    path("setup/", include("onboarding.urls")),
     path("fees/", include("fees.urls")),
     path("", include("web.urls")),
 ]

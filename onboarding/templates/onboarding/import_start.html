@@ -1,0 +1,47 @@
+{% extends "web/base.html" %}
+{% block title %}Import from spreadsheet{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'setup_home' %}">&larr; People &amp; logins</a></p>
+<div class="page-head">
+  <h1>Import from a spreadsheet</h1>
+  <p class="muted">Upload a CSV file. You will see exactly what will be created, and what is wrong, before anything changes.</p>
+</div>
+
+<div class="cards">
+  {% if can.students %}
+    <form method="post" enctype="multipart/form-data" class="card">
+      {% csrf_token %}<input type="hidden" name="kind" value="students">
+      <h3>Students and their parents</h3>
+      <p class="muted small">One row per student: admission number, name, class and section, and the parent's name and phone number. Brothers and sisters are recognised by the parent's phone number.</p>
+      <div class="field"><label for="file-students">CSV file</label><input type="file" id="file-students" name="file" accept=".csv,text/csv" required></div>
+      <div class="actions"><button class="btn" type="submit">Check file</button><a class="btn secondary" href="{% url 'setup_import_template' 'students' %}">Download template</a></div>
+    </form>
+  {% endif %}
+  {% if can.staff %}
+    <form method="post" enctype="multipart/form-data" class="card">
+      {% csrf_token %}<input type="hidden" name="kind" value="staff">
+      <h3>Staff</h3>
+      <p class="muted small">One row per staff member: employee code, name, phone, email and designation. Logins are created afterwards.</p>
+      <div class="field"><label for="file-staff">CSV file</label><input type="file" id="file-staff" name="file" accept=".csv,text/csv" required></div>
+      <div class="actions"><button class="btn" type="submit">Check file</button><a class="btn secondary" href="{% url 'setup_import_template' 'staff' %}">Download template</a></div>
+    </form>
+  {% endif %}
+</div>
+
+<h2>How to prepare the file</h2>
+<ul class="plain">
+  <li>In Excel or Google Sheets choose <strong>Save as &gt; CSV (UTF-8)</strong>. Names in Hindi and other languages are kept.</li>
+  <li>Use the template's column headings. Common alternatives (like <em>Adm No</em>, <em>DOB</em>, <em>Standard</em>, <em>Mobile</em>) are understood too.</li>
+  <li>Class can be written <em>Class V</em>, <em>5</em> or <em>5th</em>. Dates can be <em>2015-04-23</em> or <em>23/04/2015</em>.</li>
+  <li>Records that already exist are <strong>never overwritten</strong>: they are skipped and listed.</li>
+</ul>
+
+{% if recent %}
+  <h2>Recent imports</h2>
+  <ul class="plain">
+    {% for b in recent %}
+      <li><a href="{% url 'setup_import_preview' b.pk %}">{{ b.filename }}</a> &middot; {{ b.get_kind_display }} &middot; {{ b.created_at|date:"j M, H:i" }} &middot; <span class="badge {% if b.status == 'applied' %}s-paid{% else %}s-partial{% endif %}">{{ b.get_status_display }}</span></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
