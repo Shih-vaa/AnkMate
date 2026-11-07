@@ -1,0 +1,117 @@
+{% extends "web/base.html" %}
+{% block title %}Import: {{ batch.filename }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'setup_import' %}">&larr; Import</a></p>
+<div class="page-head">
+  <h1>{{ batch.get_kind_display }}</h1>
+  <p class="muted">{{ batch.filename }} &middot; {{ batch.summary.rows }} row{{ batch.summary.rows|pluralize }}
+    <span class="badge {% if batch.status == 'applied' %}s-paid{% else %}s-partial{% endif %}">{{ batch.get_status_display }}</span></p>
+</div>
+
+{% if batch.summary.ignored_columns %}
+  <div class="notice" style="margin-bottom:1rem">These columns weren't recognised and were ignored: <strong>{{ batch.summary.ignored_columns|join:", " }}</strong>.</div>
+{% endif %}
+
+{% if batch.status == "applied" %}
+  <div class="cards cols-4 compact">
+    {% if batch.kind == "students" %}
+      <div class="card stat"><div class="num">{{ batch.result.students }}</div><div class="label">Students imported</div></div>
+      <div class="card stat"><div class="num">{{ batch.result.parents_created }}</div><div class="label">New parents</div></div>
+      <div class="card stat"><div class="num">{{ batch.result.parents_linked }}</div><div class="label">Linked to existing parents</div></div>
+    {% else %}
+      <div class="card stat"><div class="num">{{ batch.result.staff }}</div><div class="label">Staff imported</div></div>
+    {% endif %}
+    <div class="card stat"><div class="num">{{ batch.summary.problems|add:batch.summary.skipped_existing|add:batch.result.skipped }}</div><div class="label">Rows not imported</div></div>
+  </div>
+  <p style="margin-top:1rem">
+    {% if batch.kind == "students" and can_provision %}<a class="btn" href="{% url 'setup_bulk' 'guardians' %}">Create parent logins</a>{% endif %}
+    {% if batch.kind == "staff" %}<a class="btn" href="{% url 'setup_bulk' 'staff' %}">Create staff logins</a>{% endif %}
+    {% if batch.problems %}<a class="btn secondary" href="{% url 'setup_import_problems' batch.pk %}">Download rows to fix</a>{% endif %}
+  </p>
+{% else %}
+  <div class="cards cols-4 compact">
+    {% if batch.kind == "students" %}
+      <div class="card stat"><div class="num">{{ batch.summary.new_students }}</div><div class="label">Students to create</div></div>
+      <div class="card stat"><div class="num">{{ batch.summary.new_parents }}</div><div class="label">New parents</div></div>
+      <div class="card stat"><div class="num">{{ batch.summary.existing_parents_linked }}</div><div class="label">Existing parents linked</div></div>
+    {% else %}
+      <div class="card stat"><div class="num">{{ batch.summary.new_staff }}</div><div class="label">Staff to create</div></div>
+    {% endif %}
+    <div class="card stat"><div class="num{% if batch.summary.problems %} danger{% endif %}">{{ batch.summary.problems }}</div><div class="label">Rows with problems</div></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;max-width:620px">
+    {% if batch.rows %}
+      <form method="post">
+        {% csrf_token %}
+        {% if batch.kind == "students" and can_provision %}
+          <label class="check"><input type="checkbox" name="create_logins"> Also create parent logins now (you'll get slips to print)</label>
+        {% endif %}
+        <button class="btn block" type="submit">Import {% if batch.kind == "students" %}{{ batch.summary.new_students }} student{{ batch.summary.new_students|pluralize }}{% else %}{{ batch.summary.new_staff }} staff{% endif %}</button>
+      </form>
+      {% if batch.summary.problems %}<p class="small muted" style="margin-top:.75rem"><strong>{{ batch.summary.problems }}</strong> row{{ batch.summary.problems|pluralize }} with problems will be skipped. Fix them in the spreadsheet and upload that file again, or import the good rows now and the rest later.</p>{% endif %}
+    {% else %}
+      <p><strong>Nothing can be imported from this file.</strong> {% if batch.summary.skipped_existing %}Everything in it already exists.{% else %}Fix the problems below and upload it again.{% endif %}</p>
+    {% endif %}
+    <p style="margin-top:.5rem"><a href="{% url 'setup_import' %}">Upload a different file</a></p>
+  </div>
+{% endif %}
+
+{% if problems %}
+  <h2>Problems <span class="muted small">({{ batch.summary.problems }})</span></h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Row</th><th>Who</th><th>What to fix</th></tr></thead>
+      <tbody>
+        {% for p in problems %}
+          <tr>
+            <td class="nowrap">{{ p.row }}</td>
+            <td>{{ p.raw.first_name }} {{ p.raw.last_name }}<div class="muted small">{{ p.raw.admission_no }}{{ p.raw.employee_code }}</div></td>
+            <td><ul class="plain">{% for e in p.errors %}<li>{{ e }}</li>{% endfor %}</ul></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:.75rem">
+    <a class="btn secondary" href="{% url 'setup_import_problems' batch.pk %}">Download the rows to fix (CSV)</a>
+    {% if batch.summary.problems > 50 %}<span class="muted small">Showing the first 50.</span>{% endif %}
+  </p>
+{% endif %}
+
+{% if batch.summary.skipped %}
+  <h2>Already in the system (skipped) <span class="muted small">({{ batch.summary.skipped_existing }})</span></h2>
+  <ul class="plain">
+    {% for s in batch.summary.skipped|slice:":15" %}<li>Row {{ s.row }}: {{ s.name }} ({{ s.admission_no }}{{ s.employee_code }}): {{ s.reason }}</li>{% endfor %}
+  </ul>
+{% endif %}
+
+{% if warned and batch.status != "applied" %}
+  <h2>Things to double-check</h2>
+  <ul class="plain">
+    {% for r in warned %}{% for w in r.warnings %}<li>Row {{ r.row }}: {{ w }}</li>{% endfor %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if sample and batch.status != "applied" %}
+  <h2>What will be created <span class="muted small">(first {{ sample|length }})</span></h2>
+  <div class="table-wrap">
+    <table class="table">
+      {% if batch.kind == "students" %}
+        <thead><tr><th>Row</th><th>Adm. no.</th><th>Student</th><th>Class</th><th>Parents</th></tr></thead>
+        <tbody>
+          {% for r in sample %}
+            <tr><td>{{ r.row }}</td><td>{{ r.admission_no }}</td><td>{{ r.first_name }} {{ r.last_name }}</td><td class="nowrap">{{ r.section_label }}{% if r.roll_no %} &middot; Roll {{ r.roll_no }}{% endif %}</td>
+              <td class="small">{% for g in r.guardians %}{{ g.name }}{% if g.phone %} ({{ g.phone }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
+          {% endfor %}
+        </tbody>
+      {% else %}
+        <thead><tr><th>Row</th><th>Code</th><th>Name</th><th>Designation</th><th>Phone</th></tr></thead>
+        <tbody>
+          {% for r in sample %}<tr><td>{{ r.row }}</td><td>{{ r.employee_code }}</td><td>{{ r.first_name }} {{ r.last_name }}</td><td>{{ r.designation }}</td><td>{{ r.phone }}</td></tr>{% endfor %}
+        </tbody>
+      {% endif %}
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

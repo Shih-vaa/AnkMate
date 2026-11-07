@@ -1,0 +1,84 @@
+{% extends "web/base.html" %}
+{% block title %}{{ heading }} - logins{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'setup_home' %}">&larr; People &amp; logins</a></p>
+<div class="page-head">
+  <h1>{{ heading }}</h1>
+  <p class="muted">{{ page.paginator.count }} record{{ page.paginator.count|pluralize }}</p>
+</div>
+
+<form method="get" class="toolbar" role="search" style="grid-template-columns:2fr 1.2fr auto">
+  <div><label for="q">Search</label><input type="search" id="q" name="q" value="{{ q }}" placeholder="Name{% if kind != 'student' %} or phone{% else %} or admission number{% endif %}"></div>
+  <div>
+    <label for="status">Login</label>
+    <select id="status" name="status">
+      <option value="">Any</option>
+      <option value="none"{% if status == "none" %} selected{% endif %}>No login yet</option>
+      <option value="must_change"{% if status == "must_change" %} selected{% endif %}>On a temporary password</option>
+      <option value="active"{% if status == "active" %} selected{% endif %}>Active</option>
+      <option value="inactive"{% if status == "inactive" %} selected{% endif %}>Deactivated</option>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<p><a class="btn secondary" href="{% url 'setup_bulk' word %}">Create logins in bulk</a></p>
+
+{% if rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Details</th><th>Login</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td><strong>{{ r.person.full_name }}</strong></td>
+            <td class="small">
+              {% if kind == "guardian" %}{{ r.person.phone|default:"No phone" }}{% if r.children %}<div class="muted">{{ r.children }}</div>{% endif %}
+              {% elif kind == "student" %}{% if r.person.cur_grade %}{{ r.person.cur_grade }}-{{ r.person.cur_section }}{% endif %} &middot; Adm. {{ r.person.admission_no }}
+              {% else %}{{ r.person.designation|default:"-" }}{% if r.person.phone %} &middot; {{ r.person.phone }}{% endif %}{% endif %}
+            </td>
+            <td>
+              <span class="badge {% if r.status == 'active' %}s-paid{% elif r.status == 'must_change' %}s-partial{% elif r.status == 'inactive' %}s-cancelled{% else %}accent{% endif %}">{{ r.label }}</span>
+              {% if r.roles %}<div class="muted small">{{ r.roles|join:", " }}</div>{% endif %}
+            </td>
+            <td class="num actions-cell">
+              {% if r.status == "none" %}
+                <form method="post" action="{% url 'setup_create_login' word r.person.pk %}" class="inline">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  {% if kind == "staff" %}
+                    <label class="sr-only" for="role{{ r.person.pk }}">Role</label>
+                    <select id="role{{ r.person.pk }}" name="role" required style="width:auto;min-height:40px">
+                      <option value="">Role...</option>{% for role in staff_roles %}<option value="{{ role.pk }}">{{ role.name }}</option>{% endfor %}
+                    </select>
+                  {% endif %}
+                  <button class="btn" type="submit">Create login</button>
+                </form>
+              {% elif r.can_manage %}
+                <form method="post" action="{% url 'setup_account_action' r.person.user_id 'reset' %}" class="inline" onsubmit="return confirm('Give {{ r.person.full_name|escapejs }} a new temporary password? Their old password will stop working.');">
+                  {% csrf_token %}<button class="btn secondary" type="submit">Reset password</button>
+                </form>
+                {% if r.status == "inactive" %}
+                  <form method="post" action="{% url 'setup_account_action' r.person.user_id 'activate' %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn secondary" type="submit">Reactivate</button></form>
+                {% else %}
+                  <form method="post" action="{% url 'setup_account_action' r.person.user_id 'deactivate' %}" class="inline" onsubmit="return confirm('Stop {{ r.person.full_name|escapejs }} from signing in?');">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn secondary" type="submit">Deactivate</button></form>
+                {% endif %}
+              {% else %}
+                <span class="muted small">Managed by the principal</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+    <div class="pager">
+      {% if page.has_previous %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.previous_page_number }}">Previous</a>{% else %}<span></span>{% endif %}
+      <span class="muted small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.next_page_number }}">Next</a>{% else %}<span></span>{% endif %}
+    </div>
+  {% endif %}
+{% else %}
+  <div class="card empty">No one matches.</div>
+{% endif %}
+{% endblock %}

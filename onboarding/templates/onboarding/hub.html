@@ -1,0 +1,72 @@
+{% extends "web/base.html" %}
+{% block title %}People & logins{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>People &amp; logins</h1>
+  <p class="muted">Bring the school's records in from a spreadsheet, then give parents, students and staff their logins.</p>
+</div>
+
+<div class="cards cols-4 compact">
+  {% if can_students %}
+    <a class="card stat" href="{% url 'setup_people' 'guardians' %}?status=none" style="color:inherit"><div class="num">{{ counts.guardians_without_login }}</div><div class="label">Parents without a login</div></a>
+    <a class="card stat" href="{% url 'setup_people' 'students' %}?status=none" style="color:inherit"><div class="num">{{ counts.students_without_login }}</div><div class="label">Students without a login</div></a>
+  {% endif %}
+  {% if can_staff %}
+    <a class="card stat" href="{% url 'setup_people' 'staff' %}?status=none" style="color:inherit"><div class="num">{{ counts.staff_without_login }}</div><div class="label">Staff without a login</div></a>
+  {% endif %}
+  <div class="card stat"><div class="num">{{ counts.temporary_passwords }}</div><div class="label">Still on a temporary password</div></div>
+</div>
+
+<h2>Get started</h2>
+<div class="cards">
+  <div class="card">
+    <h3>1. Import records</h3>
+    <p class="muted small">Upload a spreadsheet (CSV) of students with their parents' details{% if can_staff %}, or of staff{% endif %}. You see a preview and fix problems before anything is created.</p>
+    <div class="actions"><a class="btn" href="{% url 'setup_import' %}">Import from spreadsheet</a></div>
+  </div>
+  <div class="card">
+    <h3>2. Create logins</h3>
+    <p class="muted small">Each person gets a temporary password on a printable slip and chooses their own at first sign-in.</p>
+    <div class="actions">
+      {% if can_students %}<a class="btn secondary" href="{% url 'setup_bulk' 'guardians' %}">Parent logins</a><a class="btn secondary" href="{% url 'setup_bulk' 'students' %}">Student logins</a>{% endif %}
+      {% if can_staff %}<a class="btn secondary" href="{% url 'setup_bulk' 'staff' %}">Staff logins</a>{% endif %}
+    </div>
+  </div>
+</div>
+
+<h2>Find a person</h2>
+<div class="actions" style="margin-top:0">
+  {% if can_students %}<a class="btn secondary" href="{% url 'setup_people' 'guardians' %}">Parents</a><a class="btn secondary" href="{% url 'setup_people' 'students' %}">Students</a>{% endif %}
+  {% if can_staff %}<a class="btn secondary" href="{% url 'setup_people' 'staff' %}">Staff</a>{% endif %}
+</div>
+
+<h2>Recent activity</h2>
+{% if events %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>When</th><th>What</th><th>Who</th><th>By</th></tr></thead>
+      <tbody>
+        {% for e in events %}
+          <tr>
+            <td class="nowrap">{{ e.created_at|date:"j M, H:i" }}</td>
+            <td>{{ e.get_action_display }}{% if e.detail %}<div class="muted small">{{ e.detail }}</div>{% endif %}</td>
+            <td>{{ e.target_label }}</td>
+            <td>{{ e.actor.get_full_name|default:e.actor.username|default:"-" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">No account activity yet.</div>
+{% endif %}
+
+{% if batches %}
+  <h2>Recent imports</h2>
+  <ul class="plain">
+    {% for b in batches %}
+      <li><a href="{% url 'setup_import_preview' b.pk %}">{{ b.filename }}</a> &middot; {{ b.get_kind_display }} &middot; {{ b.created_at|date:"j M, H:i" }} &middot; <span class="badge {% if b.status == 'applied' %}s-paid{% else %}s-partial{% endif %}">{{ b.get_status_display }}</span></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
