@@ -6,13 +6,14 @@ from django.core.exceptions import PermissionDenied
 from .access import has_perm, permissions_for
 
 
-def require_any_perm(*perms):
-    """Login required, a school selected, and the user's roles must grant at least one of `perms`."""
+def require_any_perm(*perms, all_scope=False):
+    """Login required, a school selected, and the user's roles must grant at least one of `perms`
+    (`all_scope=True`: school-wide, not just for their own classes or children)."""
 
     def decorator(view):
         @wraps(view)
         def wrapped(request, *args, **kwargs):
-            if request.school is None or not permissions_for(request.user, request.school).intersection(perms):
+            if request.school is None or not permissions_for(request.user, request.school, all_scope=all_scope).intersection(perms):
                 raise PermissionDenied
             return view(request, *args, **kwargs)
 
