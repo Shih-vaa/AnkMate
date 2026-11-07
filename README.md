@@ -4,11 +4,12 @@ School management for one school today, many schools tomorrow: students, parents
 fee structure, with role-based access. One installable web app (PWA) that works as a desktop
 dashboard for teachers/office and as a phone app for parents and students.
 
-**Status: foundation + attendance + fees + marks + demo.** Done: multi-school core, users/roles/scoped
+**Status: foundation + attendance + fees + marks + accounts/import + demo.** Done: multi-school core, users/roles/scoped
 permissions, academic structure, people records, ICSE preset, daily attendance (marking, parent and
 student views, class registers), fee structure, monthly invoices, concessions, payments with receipts,
 reversals, dues list, exams and marks entry, class marksheets with analysis, student progress pages,
-printable report cards, responsive PWA shell, tests.
+printable report cards, logins created by the school office (with one-time printable slips, forced first-time
+password change, sign-in lockout and an audit log), CSV import of students, parents and staff, responsive PWA shell, tests.
 Not yet: online payment (gateway), notices, absence and fee reminders to parents, late fines, bulk import,
 class ranks, an audit log of mark changes.
 
@@ -20,7 +21,7 @@ python3 -m venv .venv
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py seed_demo      # fake Maple Grove School (ICSE) data + attendance + fee + marks history
 .venv/bin/python manage.py runserver
-.venv/bin/python manage.py test           # 369 tests
+.venv/bin/python manage.py test           # 515 tests
 ```
 
 If you already have a demo database from before attendance existed, run `manage.py migrate` and then
@@ -54,6 +55,7 @@ Create a platform owner with `manage.py createsuperuser` to manage schools and u
 | `people` | `Student`, `Guardian`, `Staff`, `StudentGuardian` |
 | `academics` | `AcademicYear`, `Grade`, `Section`, `Subject`, `Enrollment` (per year), `TeachingAssignment` |
 | `attendance` | `AttendanceRecord` (one per student per day), `Holiday`, the rules in `services.py`, marking/calendar/register screens |
+| `onboarding` | `AccountEvent` (audit log), `ImportBatch`, login creation/reset/deactivation rules (`provisioning.py`), CSV import (`importing.py`), the *People & logins* screens |
 | `assessments` | `Exam`, `ExamPaper` (max marks per exam/class/subject), `Mark`, `GradeBand`, `ReportRemark`, the rules in `services.py`, entry/marksheet/progress/report-card screens |
 | `fees` | `FeeHead`, `FeeStructure`, `Concession`, `FeeInvoice` (+ lines), `Payment` (+ allocations), number sequences, the billing and payment rules in `services.py` |
 | `web` | pages, templates, stylesheet, PWA manifest + service worker |
@@ -157,6 +159,45 @@ The report card (printable) shows the school, student, marks per exam with weigh
 the result, attendance for the session, the class teacher's remark and the grade scale. Staff can preview it with
 unpublished marks; parents never can.
 
+### Accounts and importing people
+
+**Getting a school going.** The office opens *People & logins*, uploads a spreadsheet of students with their parents
+(`Import from spreadsheet`), reads the preview, confirms, and hands out the printed login slips. No developer or
+platform owner is involved.
+
+**Import (CSV).** Save the sheet from Excel or Google Sheets as *CSV (UTF-8)* (Hindi and other scripts survive).
+The expected columns are in the downloadable template; common alternatives (*Adm No*, *DOB*, *Standard*, *Mobile*,
+...) are understood, and unknown columns are reported and ignored. Classes can be written *Class V*, *5* or *5th*;
+dates as `2015-04-23` or `23/04/2015` (day first). Two steps: the file is read and **every row checked** first, and
+only the previewed rows are created, in one all-or-nothing transaction. Rows with problems are skipped, listed with
+exactly what to fix, and can be downloaded as a CSV to correct and upload again. Existing records (matched on
+admission number or employee code) are **never overwritten**, just skipped and listed. Parents are matched by phone
+number, so brothers and sisters share one parent record, and so do repeat imports. Roll numbers left blank are
+assigned automatically after the highest existing one. Limits: 2 MB and 5,000 rows per file.
+
+**Logins.** Parents sign in with their phone number, students with their admission number, staff with their employee
+code (a phone number or email also works). Creating a login gives a random temporary password (`ABCD-EFGH`, no
+look-alike characters) shown **once**, on a printable slip; it is never stored readably and never appears in the
+audit log. At first sign-in the person must choose their own password before they can use anything else. A phone
+number that already has a login is never given a second one: the new role is added to the existing login (a
+teacher who is also a parent signs in once) and their password is left alone.
+
+| Who | Can |
+|---|---|
+| Office staff | import students; create logins for parents and students; reset or deactivate logins that hold only parent/student roles |
+| Principal | everything above, plus import staff, create staff logins (choosing their role), and manage any login in the school |
+
+Nobody can manage their own account here, a platform administrator's account, or a login that is also used at another
+school. A login that holds a staff role (even alongside a parent role) is only the principal's to reset or deactivate,
+so office staff can never reset their way into more access than they have. Every creation, reset, deactivation and
+reactivation is recorded in the audit log (shown on the hub and read-only in *Manage data*).
+
+**Sign-in lockout.** Five wrong passwords for the same account from the same address (or fifteen from anywhere)
+locks sign-in for 15 minutes, even for the right password; a phone number typed in different ways counts as one
+account. Tune with `LOGIN_MAX_ATTEMPTS` and `LOGIN_LOCKOUT_SECONDS`. The counters live in Django's cache: the default
+per-process cache is fine for one server, but configure a shared cache (Redis or the database) before running several
+server processes.
+
 ### Adding another school or board
 
 1. Write a preset like `core/presets/icse.py` (grades, subjects, fee heads) and register it in `core/presets/loader.py`.
@@ -166,12 +207,12 @@ unpublished marks; parents never can.
 ## Before real use (not done yet)
 
 - Switch to PostgreSQL, set `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=0`, `DJANGO_ALLOWED_HOSTS`, serve static files (WhiteNoise or nginx), HTTPS.
-- Account provisioning for parents/teachers by office staff (today only the platform owner creates accounts).
+- Import: check a real spreadsheet from the school against the template; the importer was built and tested on made-up data. Set a shared cache for the sign-in lockout if you run more than one server process.
 - Serve static files with hashed filenames (WhiteNoise `CompressedManifestStaticFilesStorage`), so a changed stylesheet is never served stale by the service worker.
 - Online payment: needs a payment-gateway account in the *school's* name (money must settle into the school's bank account, never yours). `Payment.method = "online"` and the idempotency key are already in place for it.
 - Fee reminders and absence alerts to parents (SMS/WhatsApp), and a decision on who pays for those messages.
 - Marks: confirm the exam structure, weightages, pass mark and grade scale with the school (and whether non-scholastic subjects like Art or PE are graded rather than marked); class ranks and an audit trail of every mark change are not built yet.
 - Late fines, receipt PDFs/GST needs if the school requires them, and a financial year-end/closing process (confirm with the school's accountant).
-- Password reset flow (SMS/WhatsApp cost decisions), rate limiting on login.
-- Backups, an audit log of who changed what, and a written data agreement with the school.
+- Self-service "forgot password" by SMS/WhatsApp (today the office resets it in person; SMS costs need a decision), and sending login slips digitally instead of on paper.
+- Backups, a wider audit log (today only account actions are logged), and a written data agreement with the school.
 - Verify the ICSE class/subject lists and replace dummy fee amounts with the school's real ones.
