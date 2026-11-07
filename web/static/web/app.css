@@ -345,3 +345,7 @@ ul.plain { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: 
 .paper-form { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid var(--border); }
 .inline-form { display: flex; gap: .5rem; align-items: center; margin-top: .25rem; }
 .actions form { display: inline; }
+
+/* ---- accounts ---------------------------------------------------------------------------- */
+.topbar-links { display: flex; align-items: center; gap: 1rem; }
+.topbar-links form { margin: 0; }

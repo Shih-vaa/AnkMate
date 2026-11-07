@@ -12,7 +12,7 @@ class UserAdmin(DjangoUserAdmin):
 
     list_display = ("username", "phone", "email", "first_name", "last_name", "is_staff", "is_active")
     search_fields = ("username", "phone", "email", "first_name", "last_name")
-    fieldsets = DjangoUserAdmin.fieldsets + (("Contact", {"fields": ("phone",)}),)
+    fieldsets = DjangoUserAdmin.fieldsets + (("Contact", {"fields": ("phone", "must_change_password")}),)
     add_fieldsets = DjangoUserAdmin.add_fieldsets + (("Contact", {"fields": ("phone",)}),)
 
     def has_module_permission(self, request):

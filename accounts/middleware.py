@@ -31,3 +31,23 @@ class SchoolMiddleware:
                 request.session[SESSION_KEY] = chosen.pk
             request.school = chosen
         return self.get_response(request)
+
+
+class PasswordChangeRequiredMiddleware:
+    """While someone is still on a temporary password, the only things they can reach are the change-password
+    page, logging out, and the static files the page needs. Everything else sends them to choose their own password."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = request.user
+        if user.is_authenticated and user.must_change_password:
+            from django.contrib.staticfiles.storage import staticfiles_storage
+            from django.shortcuts import redirect
+            from django.urls import reverse
+
+            allowed = {reverse(name) for name in ("password_change", "logout", "service_worker", "manifest", "offline")}
+            if request.path not in allowed and not request.path.startswith(staticfiles_storage.base_url):
+                return redirect("password_change")
+        return self.get_response(request)

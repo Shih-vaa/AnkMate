@@ -7,6 +7,7 @@ admin.site.site_title = f"{settings.PRODUCT_NAME} admin"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("account/", include("accounts.urls")),
     path("attendance/", include("attendance.urls")),
     path("marks/", include("assessments.urls")),
     path("fees/", include("fees.urls")),
