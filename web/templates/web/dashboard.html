@@ -10,6 +10,30 @@
   </p>
 </div>
 
+{% if new_reminders or latest_notices %}
+  <div class="section-head"><h2 style="margin-top:0">{% if new_reminders %}For you{% else %}Latest notices{% endif %}</h2><a class="small" href="{% url 'notice_list' %}">All notices</a></div>
+  <div class="dash-news">
+    {% for r in new_reminders %}
+      <a class="card reminder unread" href="{% url 'reminder_open' r.pk %}">
+        <div class="notice-top"><span class="new-tag">New</span><strong>{{ r.title }}</strong></div>
+        <div class="muted small">{{ r.body }}</div>
+      </a>
+    {% endfor %}
+    {% if more_reminders > 0 %}<a class="small" href="{% url 'notice_list' %}">{{ more_reminders }} more reminder{{ more_reminders|pluralize }}</a>{% endif %}
+    {% for n in latest_notices %}
+      <a class="card notice-item{% if n.pk in unread_notices %} unread{% endif %}" href="{% url 'notice_detail' n.pk %}">
+        <div class="notice-top">
+          <span class="badge cat-{{ n.category }}">{{ n.get_category_display }}</span>
+          {% if n.pk in unread_notices %}<span class="new-tag">New</span>{% endif %}
+          <span class="muted small push-right">{{ n.posted_at|date:"j M" }}</span>
+        </div>
+        <strong>{{ n.title }}</strong>
+        <div class="muted small">{{ n.body|truncatechars:90 }}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
 {% if school_stats %}
   <div class="cards cols-4 compact">
     <div class="card stat"><div class="num">{{ school_stats.students }}</div><div class="label">Active students</div></div>
@@ -127,6 +151,6 @@
 {% endif %}
 
 <div class="notice" style="margin-top:2rem">
-  <strong>Demo build.</strong> Online fee payment and notices are the next modules. Fee amounts shown are dummy values.
+  <strong>Demo build.</strong> Online fee payment is the next module. Fee amounts shown are dummy values.
 </div>
 {% endblock %}

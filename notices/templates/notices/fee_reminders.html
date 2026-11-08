@@ -1,0 +1,61 @@
+{% extends "web/base.html" %}
+{% load money %}
+{% block title %}Fee reminders{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'fee_dues' %}">&larr; Fee dues</a></p>
+<div class="page-head">
+  <h1>Fee reminders</h1>
+  <p class="muted">Families with overdue fees. A reminder appears for the parents under Notices the next time they open the app. Each family is reminded at most once in {{ cooldown_days }} days.</p>
+</div>
+
+<form method="get" class="toolbar" style="grid-template-columns:1fr auto;max-width:480px">
+  <div>
+    <label for="grade">Class</label>
+    <select id="grade" name="grade">
+      <option value="">All classes</option>
+      {% for g in grades %}<option value="{{ g.pk }}"{% if grade_id == g.pk %} selected{% endif %}>{{ g.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn secondary" type="submit">Filter</button>
+</form>
+
+{% if rows %}
+  <p class="muted small">{{ counts.ready }} ready to remind &middot; {{ counts.recent }} reminded in the last {{ cooldown_days }} days &middot; {{ counts.no_login }} with no parent login (phone these families)</p>
+  <form method="post">
+    {% csrf_token %}
+    {% if grade_id %}<input type="hidden" name="grade" value="{{ grade_id }}">{% endif %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th><span class="sr-only">Remind</span></th><th>Student</th><th class="num">Overdue</th><th>Reminder goes to</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{% if r.state == "ready" %}<input type="checkbox" name="student" value="{{ r.student.pk }}" checked aria-label="Remind the family of {{ r.student.full_name }}">{% endif %}</td>
+              <td><a href="{% url 'fee_student' r.student.pk %}">{{ r.student.full_name }}</a><div class="muted small">{{ r.class_label }} &middot; Adm. {{ r.student.admission_no }}</div></td>
+              <td class="num danger">{{ r.overdue|inr }}</td>
+              <td>{% for u in r.parents %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">No one</span>{% endfor %}</td>
+              <td>
+                {% if r.state == "ready" %}
+                  <span class="badge s-due">Ready</span>{% if r.last_sent %} <span class="muted small">last reminded {{ r.last_sent|date:"j M" }}</span>{% endif %}
+                {% elif r.state == "recent" %}
+                  <span class="badge s-paid">Reminded {{ r.last_sent|date:"j M" }}</span>
+                {% else %}
+                  <span class="badge s-overdue">No parent login</span>
+                  {% for name, phone in r.contacts %}<div class="small">{{ name }}: <span class="nowrap">{{ phone }}</span></div>{% empty %}<div class="muted small">No phone number on file</div>{% endfor %}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if counts.ready %}
+      <div class="sticky-save"><button class="btn block" type="submit">Send reminders to the ticked families</button></div>
+    {% else %}
+      <p class="muted" style="margin-top:1rem">Nobody is ready to remind right now.</p>
+    {% endif %}
+  </form>
+{% else %}
+  <div class="card empty">No overdue fees. Nothing to remind anyone about.</div>
+{% endif %}
+{% endblock %}

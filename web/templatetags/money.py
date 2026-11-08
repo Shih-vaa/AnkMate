@@ -1,27 +1,15 @@
 """Template filters for rupee amounts with Indian digit grouping (12,34,567.50)."""
-import re
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django import template
+
+from core.money import format_inr
 
 register = template.Library()
 
 
 def _format(value, places):
-    if value in (None, ""):
-        return ""
-    try:
-        amount = Decimal(str(value))
-    except (InvalidOperation, ValueError):
-        return str(value)
-    quant = Decimal(1).scaleb(-places)
-    amount = amount.quantize(quant, rounding=ROUND_HALF_UP)
-    sign = "-" if amount < 0 else ""
-    whole, _, fraction = f"{abs(amount):.{places}f}".partition(".")
-    if len(whole) > 3:
-        head, tail = whole[:-3], whole[-3:]
-        whole = re.sub(r"(\d)(?=(\d\d)+$)", r"\1,", head) + "," + tail
-    return f"{sign}₹{whole}" + (f".{fraction}" if places else "")
+    return format_inr(value, places)
 
 
 @register.filter

@@ -293,6 +293,7 @@ def dues(request):
         {
             "rows": rows, "now": now, "grades": Grade.objects.filter(school=school), "grade_id": grade_id,
             "overdue_only": overdue_only,
+            "can_remind": has_perm(request.user, school, "fees.collect", all_scope=True),
             "total_outstanding": sum((r["outstanding"] for r in rows), ZERO),
             "total_overdue": sum((r["overdue"] for r in rows), ZERO),
         },

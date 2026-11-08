@@ -18,6 +18,7 @@ from accounts.defaults import ensure_default_roles
 from accounts.models import Membership, User
 from core.models import School
 from core.presets.loader import apply_preset
+from notices.demo import seed_notices
 from people.models import Guardian, Staff, Student, StudentGuardian
 
 DEMO_PASSWORD = "demo@1234"
@@ -150,10 +151,12 @@ class Command(BaseCommand):
         attendance_count = seed_attendance(school)
         fee_counts = seed_fees(school)
         mark_counts = seed_marks(school)
+        notice_counts = seed_notices(school)
         self.stdout.write(self.style.SUCCESS(f"Seeded {school.name} ({school.board}), session {year.name}."))
         self.stdout.write(f"  {attendance_count} attendance records.")
         self.stdout.write(f"  {fee_counts['invoices']} invoices, {fee_counts['payments']} payments, {fee_counts['concessions']} concessions.")
         self.stdout.write(f"  {mark_counts['marks']} marks, {mark_counts['remarks']} report-card remarks.")
+        self.stdout.write(f"  {notice_counts['notices']} notices, {notice_counts['reminders']} fee reminders.")
         self.stdout.write(
             f"  {Staff.objects.filter(school=school).count()} staff, {Student.objects.filter(school=school).count()} students, "
             f"{Guardian.objects.filter(school=school).count()} guardians, {Section.objects.filter(school=school).count()} sections."

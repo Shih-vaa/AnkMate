@@ -2,6 +2,7 @@ from django.conf import settings
 
 from accounts.access import memberships_for, permissions_for, scopes_for
 from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED, SCOPE_CHILDREN, SCOPE_SELF
+from notices.reminders import unread_total
 
 _ACTIVE_NAV = {
     "dashboard": "dashboard",
@@ -19,6 +20,11 @@ _ACTIVE_NAV = {
     "marks_sheet": "marks",
     "marks_student": "marks",
     "marks_report": "marks",
+    "notice_list": "notices",
+    "notice_new": "notices",
+    "notice_detail": "notices",
+    "notice_edit": "notices",
+    "fee_reminders": "fees",
     "setup_home": "setup",
     "setup_people": "setup",
     "setup_bulk": "setup",
@@ -68,8 +74,11 @@ def app_context(request):
     if "fees.view" in perms:
         nav.append({"key": "fees", "label": "Fees", "url_name": "fee_home"})
 
+    if "notices.view" in perms:
+        nav.append({"key": "notices", "label": "Notices", "url_name": "notice_list", "badge": unread_total(user, school)})
+
     if permissions_for(user, school, all_scope=True) & {"students.manage", "staff.manage"}:
-        nav.append({"key": "setup", "label": "People & logins", "url_name": "setup_home"})
+        nav.append({"key": "setup", "label": "People & logins", "short": "People", "url_name": "setup_home"})
 
     match = getattr(request, "resolver_match", None)
     ctx.update(

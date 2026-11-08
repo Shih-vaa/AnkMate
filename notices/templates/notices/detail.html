@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% block title %}{{ notice.title }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'notice_list' %}">&larr; Notices</a></p>
+
+{% if notice.is_withdrawn %}
+  <div class="notice"><strong>Withdrawn.</strong> Readers no longer see this notice; you can because you posted it or run the office.</div>
+{% elif expired %}
+  <div class="notice"><strong>Ended on {{ notice.expires_on|date:"j M Y" }}.</strong> Readers no longer see this notice.</div>
+{% endif %}
+
+<article class="card notice-full">
+  <div class="notice-top">
+    <span class="badge cat-{{ notice.category }}">{{ notice.get_category_display }}</span>
+    <span class="muted small push-right">{{ notice.posted_at|date:"l, j F Y" }}</span>
+  </div>
+  <h1>{{ notice.title }}</h1>
+  <p class="muted small">From {{ notice.author_name }}{% if notice.edited_at %} &middot; edited {{ notice.edited_at|date:"j M Y" }}{% endif %}</p>
+  <div class="notice-body">{{ notice.body|urlizetrunc:50|linebreaks }}</div>
+  <p class="muted small" style="margin-top:1rem">For: {{ audience|join:", " }}{% if notice.expires_on and not expired %} &middot; shown until {{ notice.expires_on|date:"j M Y" }}{% endif %}</p>
+</article>
+
+{% if reach %}
+  <h2>How far it reached</h2>
+  <div class="card">
+    <div class="pcts" style="margin-top:0">
+      <div><span class="pct">{{ reach.read }}</span><span class="muted small">of {{ reach.total }} {{ reach.total|pluralize:"person has,people have" }} read it</span></div>
+    </div>
+    {% if reach.total %}<div class="bar" aria-hidden="true"><span style="width:{% widthratio reach.read reach.total 100 %}%"></span></div>{% endif %}
+    {% if reach.unreached %}
+      <p class="small" style="margin:.75rem 0 0"><strong>{{ reach.unreached }} student{{ reach.unreached|pluralize }}</strong> in this audience {{ reach.unreached|pluralize:"has,have" }} no parent or student login yet, so {{ reach.unreached|pluralize:"their family can't,their families can't" }} see it.
+        {% if can_fix_logins %}<a href="{% url 'setup_home' %}">Create logins</a>{% endif %}</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if can_manage and not notice.is_withdrawn %}
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'notice_edit' notice.pk %}">Edit wording</a>
+    <form method="post" action="{% url 'notice_withdraw' notice.pk %}" onsubmit="return confirm('Withdraw this notice? Readers will no longer see it.');">{% csrf_token %}
+      <button class="btn secondary" type="submit">Withdraw</button>
+    </form>
+  </div>
+  <p class="muted small">Who it is for can't be changed after posting. To reach other people, post a new notice.</p>
+{% endif %}
+{% endblock %}

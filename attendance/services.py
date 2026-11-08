@@ -8,6 +8,7 @@ so it can be tested without a browser. Per-school behaviour comes from `School.s
     attendance_edit_window_days   how far back a teacher may mark/edit                default 7
 """
 import calendar
+import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -22,6 +23,9 @@ from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED
 from people.models import Staff
 
 from .models import AttendanceRecord, Holiday, Status
+from .signals import attendance_saved
+
+logger = logging.getLogger(__name__)
 
 PRESENT_LIKE = [Status.PRESENT.value, Status.LATE.value, Status.HALF_DAY.value]
 
@@ -178,6 +182,13 @@ def save_section_attendance(section, on_date, marks, user):
         unique_fields=["student", "date"],
         update_fields=["status", "section", "marked_by", "marked_at"],
     )
+    # Listeners (for example absence alerts to parents) must never be able to stop attendance from being saved:
+    # send_robust catches their errors, and the listeners do their own work inside a savepoint.
+    for receiver, outcome in attendance_saved.send_robust(
+        sender=None, section=section, on_date=on_date, marks=dict(marks), user=user
+    ):
+        if isinstance(outcome, Exception):
+            logger.error("An attendance listener failed: %r", outcome, exc_info=outcome)
     return len(marks)
 
 

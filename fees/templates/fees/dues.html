@@ -38,7 +38,10 @@
       </tbody>
     </table>
   </div>
-  <p style="margin-top:1rem"><a class="btn secondary" href="?{% if grade_id %}grade={{ grade_id }}&amp;{% endif %}{% if overdue_only %}overdue=1&amp;{% endif %}format=csv">Download as spreadsheet (CSV)</a></p>
+  <div class="actions">
+    {% if can_remind %}<a class="btn" href="{% url 'fee_reminders' %}{% if grade_id %}?grade={{ grade_id }}{% endif %}">Send fee reminders</a>{% endif %}
+    <a class="btn secondary" href="?{% if grade_id %}grade={{ grade_id }}&amp;{% endif %}{% if overdue_only %}overdue=1&amp;{% endif %}format=csv">Download as spreadsheet (CSV)</a>
+  </div>
 {% else %}
   <div class="card empty">No dues{% if overdue_only %} overdue{% endif %}. Everything has been paid.</div>
 {% endif %}

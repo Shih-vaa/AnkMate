@@ -12,5 +12,6 @@ urlpatterns = [
     path("marks/", include("assessments.urls")),
     path("setup/", include("onboarding.urls")),
     path("fees/", include("fees.urls")),
+    path("notices/", include("notices.urls")),
     path("", include("web.urls")),
 ]
