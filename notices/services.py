@@ -252,7 +252,7 @@ class Reach:
     unreached: int   # students in the audience nobody can reach yet: no parent or student login
 
 
-def _eligible_user_ids(school):
+def eligible_user_ids(school):
     """Everyone with an active login that lets them read notices in this school."""
     memberships = Membership.objects.filter(school=school, is_active=True, user__is_active=True).select_related("role")
     return {m.user_id for m in memberships if "notices.view" in m.role.permissions}
@@ -260,7 +260,7 @@ def _eligible_user_ids(school):
 
 def reach(notice):
     school = notice.school
-    eligible = _eligible_user_ids(school)
+    eligible = eligible_user_ids(school)
     targets = list(notice.targets.all())
     candidates, unreached = set(), 0
 

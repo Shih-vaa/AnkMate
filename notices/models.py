@@ -108,3 +108,42 @@ class NoticeRead(TenantModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["notice", "user"], name="uniq_notice_read_per_user")]
+
+
+class Reminder(TenantModel):
+    """A message for one person: a fee that is overdue, a child marked absent. Notices go to an audience;
+    reminders go to a single login, and each can be opened (which marks it read) or left."""
+
+    class Kind(models.TextChoices):
+        FEE = "fee", "Fee reminder"
+        ABSENCE = "absence", "Absence"
+        ABSENCE_FIX = "absence_fix", "Attendance corrected"
+
+    tenant_links = ("student",)
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reminders")
+    student = models.ForeignKey("people.Student", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    title = models.CharField(max_length=120)
+    body = models.CharField(max_length=400)
+    link = models.CharField(max_length=200, blank=True, help_text="A page of this app to open, such as /fees/student/5/")
+    key = models.CharField(max_length=100, blank=True, help_text="Stops the same reminder being sent twice")
+    created_at = models.DateTimeField(default=timezone.now)
+    read_at = models.DateTimeField(null=True, blank=True)
+    sent_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["user", "school", "read_at"], name="reminder_user_unread_idx")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "user", "key"], condition=~Q(key=""), name="uniq_reminder_key_per_user"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.title} (to {self.user})"
+
+    @property
+    def is_read(self):
+        return self.read_at is not None
