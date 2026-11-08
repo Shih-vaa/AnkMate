@@ -4,14 +4,14 @@ School management for one school today, many schools tomorrow: students, parents
 fee structure, with role-based access. One installable web app (PWA) that works as a desktop
 dashboard for teachers/office and as a phone app for parents and students.
 
-**Status: foundation + attendance + fees + marks + accounts/import + demo.** Done: multi-school core, users/roles/scoped
+**Status: foundation + attendance + fees + marks + accounts/import + notices/reminders + demo.** Done: multi-school core, users/roles/scoped
 permissions, academic structure, people records, ICSE preset, daily attendance (marking, parent and
 student views, class registers), fee structure, monthly invoices, concessions, payments with receipts,
 reversals, dues list, exams and marks entry, class marksheets with analysis, student progress pages,
 printable report cards, logins created by the school office (with one-time printable slips, forced first-time
-password change, sign-in lockout and an audit log), CSV import of students, parents and staff, responsive PWA shell, tests.
-Not yet: online payment (gateway), notices, absence and fee reminders to parents, late fines, bulk import,
-class ranks, an audit log of mark changes.
+password change, sign-in lockout and an audit log), CSV import of students, parents and staff, notices to the whole
+school or a role, class or section, fee reminders and absence alerts for parents, responsive PWA shell, tests.
+Not yet: online payment (gateway), SMS/WhatsApp delivery, late fines, class ranks, an audit log of mark changes.
 
 ## Run it
 
@@ -21,11 +21,11 @@ python3 -m venv .venv
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py seed_demo      # fake Maple Grove School (ICSE) data + attendance + fee + marks history
 .venv/bin/python manage.py runserver
-.venv/bin/python manage.py test           # 515 tests
+.venv/bin/python manage.py test           # 705 tests
 ```
 
 If you already have a demo database from before attendance existed, run `manage.py migrate` and then
-`manage.py seed_attendance` (add `--reset` to regenerate). The same goes for fees (`manage.py seed_fees`) and marks (`manage.py seed_marks`); each takes `--reset` to regenerate.
+`manage.py seed_attendance` (add `--reset` to regenerate). The same goes for fees (`manage.py seed_fees`) and marks (`manage.py seed_marks`); each takes `--reset` to regenerate. Notices and fee reminders: `manage.py seed_notices` (also `--reset`).
 
 Open http://localhost:8000/ . On a phone on the same Wi-Fi, run
 `runserver 0.0.0.0:8000` and add that host to `DJANGO_ALLOWED_HOSTS`.
@@ -55,6 +55,7 @@ Create a platform owner with `manage.py createsuperuser` to manage schools and u
 | `people` | `Student`, `Guardian`, `Staff`, `StudentGuardian` |
 | `academics` | `AcademicYear`, `Grade`, `Section`, `Subject`, `Enrollment` (per year), `TeachingAssignment` |
 | `attendance` | `AttendanceRecord` (one per student per day), `Holiday`, the rules in `services.py`, marking/calendar/register screens |
+| `notices` | `Notice` (+ audience targets and read marks), `Reminder`, who-sees-what and posting rules in `services.py`, fee reminders and absence alerts in `reminders.py`, the *Notices* screens |
 | `onboarding` | `AccountEvent` (audit log), `ImportBatch`, login creation/reset/deactivation rules (`provisioning.py`), CSV import (`importing.py`), the *People & logins* screens |
 | `assessments` | `Exam`, `ExamPaper` (max marks per exam/class/subject), `Mark`, `GradeBand`, `ReportRemark`, the rules in `services.py`, entry/marksheet/progress/report-card screens |
 | `fees` | `FeeHead`, `FeeStructure`, `Concession`, `FeeInvoice` (+ lines), `Payment` (+ allocations), number sequences, the billing and payment rules in `services.py` |
@@ -198,6 +199,44 @@ account. Tune with `LOGIN_MAX_ATTEMPTS` and `LOGIN_LOCKOUT_SECONDS`. The counter
 per-process cache is fine for one server, but configure a shared cache (Redis or the database) before running several
 server processes.
 
+### Notices and reminders
+
+**Notices** are announcements from the school. Whoever may post chooses the audience: everyone, a role (all parents,
+all teachers), a whole class, or single sections; a notice can have several of these. Who may read a notice is worked
+out when it is asked for, never copied onto people, so a child who changes class changes what their parents see and
+a new parent sees the notices already posted for their child's class.
+
+| Who | Reads | Posts to |
+|---|---|---|
+| Principal, office | every notice | anyone in the school |
+| Accountant | every notice | nobody (reads only) |
+| Teacher | school-wide, their role, the classes they teach | only the sections they teach |
+| Parent / student | school-wide, their role, their child's (own) class | nobody |
+
+A teacher who is also a parent reads both ways. The author or the school office can fix a notice's wording or
+**withdraw** it (readers stop seeing it; it stays on record). Who it is for can't be changed after posting: post a new
+notice to reach other people. A notice can have a last day, after which it drops off for readers. The text is plain
+text shown as text (never as markup), with web addresses turned into links. The author and the office see **how far a
+notice reached** (how many have opened it) and how many students in the audience have no parent or student login yet,
+so nobody quietly misses out.
+
+**Reminders** are messages for one person. They appear at the top of the Notices page and on the home page, and
+opening one marks it read and goes to the page it is about.
+
+- *Fee reminders.* Fee staff (school-wide, with permission to collect fees) open *Send fee reminders* from the dues
+  page, see who is overdue and who would be told, and send to the families they tick. Dues are worked out again at the
+  moment of sending, so a family that paid in between is left alone; a family is reminded at most once in 7 days;
+  pressing send twice cannot double up. Families with no parent login are listed with their phone numbers so the office
+  can ring them.
+- *Absence alerts.* When a teacher saves attendance, the parents of a child marked **absent** hear that day (not for
+  leave, late or half days). If the mark is corrected before the alert was read, the alert is taken back; if it was
+  already read, a short correction follows. Registers back-filled for older days don't alarm anyone: only today and the two days
+  before alert. Per school (`School.settings`): `absence_alerts` (true/false, default true) and `absence_alert_days`
+  (default 2). Alerts run behind a signal in a savepoint, so a failure can never stop attendance from being saved.
+
+Reminders and notices are in the app only for now. Nothing is sent by SMS or WhatsApp, so a parent without a login or
+who never opens the app won't see them (the lists show who that is).
+
 ### Adding another school or board
 
 1. Write a preset like `core/presets/icse.py` (grades, subjects, fee heads) and register it in `core/presets/loader.py`.
@@ -210,7 +249,7 @@ server processes.
 - Import: check a real spreadsheet from the school against the template; the importer was built and tested on made-up data. Set a shared cache for the sign-in lockout if you run more than one server process.
 - Serve static files with hashed filenames (WhiteNoise `CompressedManifestStaticFilesStorage`), so a changed stylesheet is never served stale by the service worker.
 - Online payment: needs a payment-gateway account in the *school's* name (money must settle into the school's bank account, never yours). `Payment.method = "online"` and the idempotency key are already in place for it.
-- Fee reminders and absence alerts to parents (SMS/WhatsApp), and a decision on who pays for those messages.
+- Delivering notices, fee reminders and absence alerts by SMS/WhatsApp or push notification (today they only appear in the app), and a decision on who pays for those messages. Notice text can't have attachments or images yet.
 - Marks: confirm the exam structure, weightages, pass mark and grade scale with the school (and whether non-scholastic subjects like Art or PE are graded rather than marked); class ranks and an audit trail of every mark change are not built yet.
 - Late fines, receipt PDFs/GST needs if the school requires them, and a financial year-end/closing process (confirm with the school's accountant).
 - Self-service "forgot password" by SMS/WhatsApp (today the office resets it in person; SMS costs need a decision), and sending login slips digitally instead of on paper.
