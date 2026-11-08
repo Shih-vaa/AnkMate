@@ -12,7 +12,7 @@
     <div class="school-name">{{ school.name }}</div>
     <nav>
       {% for item in nav %}
-        <a href="{% url item.url_name %}" class="{% if item.key == active_nav %}active{% endif %}"{% if item.key == active_nav %} aria-current="page"{% endif %}>{{ item.label }}</a>
+        <a href="{% url item.url_name %}" class="{% if item.key == active_nav %}active{% endif %}"{% if item.key == active_nav %} aria-current="page"{% endif %}>{{ item.label }}{% if item.badge %}<span class="nav-count" aria-hidden="true">{{ item.badge }}</span><span class="sr-only"> ({{ item.badge }} new)</span>{% endif %}</a>
       {% endfor %}
       {% if show_admin_link %}<a href="{% url 'admin:index' %}">Manage data</a>{% endif %}
     </nav>
@@ -52,7 +52,7 @@
 
   <nav class="bottom-nav" aria-label="Main">
     {% for item in nav %}
-      <a href="{% url item.url_name %}" class="{% if item.key == active_nav %}active{% endif %}"{% if item.key == active_nav %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      <a href="{% url item.url_name %}" class="{% if item.key == active_nav %}active{% endif %}"{% if item.key == active_nav %} aria-current="page"{% endif %}>{{ item.short|default:item.label }}{% if item.badge %}<span class="nav-count" aria-hidden="true">{{ item.badge }}</span><span class="sr-only"> ({{ item.badge }} new)</span>{% endif %}</a>
     {% endfor %}
   </nav>
 </div>

@@ -13,6 +13,8 @@ from accounts.permissions import SCOPE_ALL, SCOPE_ASSIGNED, SCOPE_CHILDREN, SCOP
 from assessments import services as marks_services
 from attendance import services as attendance_services
 from fees import services as fee_services
+from notices import reminders as notice_reminders
+from notices import services as notice_services
 from people.models import Guardian, Staff, Student
 
 
@@ -95,6 +97,12 @@ def dashboard(request):
 
     if SCOPE_SELF in scopes:
         ctx["me"] = list(with_current_class(students_in_scope(user, school, SCOPE_SELF)))
+
+    if notice_services.can_view(user, school):
+        ctx["new_reminders"] = list(notice_reminders.unread_reminders(user, school)[:3])
+        ctx["latest_notices"] = list(notice_services.visible_notices(user, school)[:3])
+        ctx["unread_notices"] = set(notice_services.unread_notices(user, school).values_list("pk", flat=True))
+        ctx["more_reminders"] = notice_reminders.unread_reminders(user, school).count() - len(ctx["new_reminders"])
 
     return render(request, "web/dashboard.html", ctx)
 

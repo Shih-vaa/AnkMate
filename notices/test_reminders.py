@@ -167,6 +167,15 @@ class FeeReminderPlanTests(ReminderCase):
         self.assertEqual(rows["A4"]["overdue"], Decimal("2000.00"))
         self.assertEqual(rows["A1"]["class_label"], "Class 5-A")
 
+    def test_families_the_app_cannot_reach_come_with_phone_numbers(self):
+        nila = Guardian.objects.create(school=self.school_a, first_name="Nila", last_name="Rao", phone="9000000011")
+        silent = Guardian.objects.create(school=self.school_a, first_name="Quiet")  # no phone number on file
+        StudentGuardian.objects.create(school=self.school_a, student=self.dev, guardian=nila, is_primary=True)
+        StudentGuardian.objects.create(school=self.school_a, student=self.dev, guardian=silent)
+        rows = self.rows()
+        self.assertEqual(rows["A4"]["contacts"], [("Nila Rao", "9000000011")])
+        self.assertEqual(rows["A1"]["contacts"], [])  # reachable through the app: no phone list needed
+
     def test_a_family_that_has_paid_is_not_listed(self):
         self.pay_in_full(self.asha)
         self.assertNotIn("A1", self.rows())

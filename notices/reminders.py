@@ -121,7 +121,8 @@ def can_send_fee_reminders(user, school):
 
 def fee_reminder_rows(school, *, grade_id=None, now=None):
     """Students with overdue fees, each with who would be told and whether they were reminded lately.
-    `state` is 'ready', 'recent' (reminded within the last week) or 'no_login' (no parent can sign in)."""
+    `state` is 'ready', 'recent' (reminded within the last week) or 'no_login' (no parent can sign in; `contacts`
+    then lists the (name, phone) of their guardians so the office can ring them)."""
     now = now or fee_services.today()
     rows = fee_services.dues_report(school, grade_id=grade_id, overdue_only=True, now=now)
     ids = [row["student"].pk for row in rows]
@@ -132,8 +133,18 @@ def fee_reminder_rows(school, *, grade_id=None, now=None):
         .annotate(last=Max("created_at"))
         .values_list("student_id", "last")
     )
+    unreachable = [sid for sid in ids if not parents[sid]]
+    contacts = {sid: [] for sid in unreachable}  # who to phone for the families the app cannot reach
+    for link in (
+        StudentGuardian.objects.filter(school=school, student_id__in=unreachable)
+        .select_related("guardian")
+        .order_by("-is_primary", "guardian__first_name", "pk")
+    ):
+        if link.guardian.phone:
+            contacts[link.student_id].append((link.guardian.full_name, link.guardian.phone))
     for row in rows:
         sid = row["student"].pk
+        row["contacts"] = contacts.get(sid, [])
         row["parents"] = parents[sid]
         row["last_sent"] = last.get(sid)
         if not row["parents"]:

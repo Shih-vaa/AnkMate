@@ -1,0 +1,90 @@
+{% extends "web/base.html" %}
+{% block title %}Notices{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Notices</h1>
+  <p class="muted">Announcements from the school{% if view == "inbox" %}, and reminders meant just for you{% endif %}.</p>
+</div>
+
+{% if can_post or can_remind %}
+  <div class="actions" style="margin-top:0;margin-bottom:1rem">
+    {% if can_post %}<a class="btn" href="{% url 'notice_new' %}">Post a notice</a>{% endif %}
+    {% if can_remind %}<a class="btn secondary" href="{% url 'fee_reminders' %}">Send fee reminders</a>{% endif %}
+  </div>
+{% endif %}
+
+{% if view == "inbox" and reminder_list %}
+  <div class="section-head">
+    <h2>Reminders for you</h2>
+    {% if unread_reminder_count %}
+      <form method="post" action="{% url 'reminders_read_all' %}" class="inline">{% csrf_token %}<button class="linklike small" type="submit">Mark all as read</button></form>
+    {% endif %}
+  </div>
+  <ul class="rows">
+    {% for r in reminder_list %}
+      <li>
+        <a class="card reminder{% if not r.is_read %} unread{% endif %}" href="{% url 'reminder_open' r.pk %}">
+          <div class="notice-top">
+            {% if not r.is_read %}<span class="new-tag">New</span>{% endif %}
+            <strong>{{ r.title }}</strong>
+            <span class="muted small push-right">{{ r.created_at|date:"j M, g:i a" }}</span>
+          </div>
+          <div class="muted small">{{ r.body }}</div>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <h2>Notices</h2>
+{% endif %}
+
+{% if can_post %}
+  <nav class="tabs" aria-label="Which notices">
+    <a href="?view=inbox"{% if view == "inbox" %} class="active" aria-current="page"{% endif %}>For me</a>
+    <a href="?view=mine"{% if view == "mine" %} class="active" aria-current="page"{% endif %}>Posted by me</a>
+    {% if school_wide_poster %}<a href="?view=all"{% if view == "all" %} class="active" aria-current="page"{% endif %}>Everything posted</a>{% endif %}
+  </nav>
+{% endif %}
+
+<form method="get" class="toolbar" style="grid-template-columns:1fr auto;max-width:480px">
+  <input type="hidden" name="view" value="{{ view }}">
+  <div>
+    <label for="category">Show</label>
+    <select id="category" name="category">
+      <option value="">All kinds of notice</option>
+      {% for value, label in categories %}<option value="{{ value }}"{% if category == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn secondary" type="submit">Filter</button>
+</form>
+
+{% if page.object_list %}
+  <ul class="rows">
+    {% for n in page %}
+      <li>
+        <a class="card notice-item{% if n.unread %} unread{% endif %}{% if n.dead %} dead{% endif %}" href="{% url 'notice_detail' n.pk %}">
+          <div class="notice-top">
+            <span class="badge cat-{{ n.category }}">{{ n.get_category_display }}</span>
+            {% if n.unread %}<span class="new-tag">New</span>{% endif %}
+            {% if n.is_withdrawn %}<span class="badge s-cancelled">Withdrawn</span>{% elif n.dead %}<span class="badge s-cancelled">Ended</span>{% endif %}
+            <span class="muted small push-right">{{ n.posted_at|date:"j M Y" }}</span>
+          </div>
+          <h3>{{ n.title }}</h3>
+          <div class="muted notice-snippet">{{ n.body|truncatechars:150 }}</div>
+          <div class="muted small">From {{ n.author_name }} &middot; To {{ n.audience_labels|join:", " }}</div>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page.has_previous %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.previous_page_number }}">Previous</a>{% else %}<span></span>{% endif %}
+    <span class="muted small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page.next_page_number }}">Next</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+{% else %}
+  <div class="card empty">
+    {% if view == "mine" %}You haven't posted any notices yet.{% elif category %}No notices of this kind.{% else %}No notices right now.{% endif %}
+  </div>
+{% endif %}
+{% endblock %}

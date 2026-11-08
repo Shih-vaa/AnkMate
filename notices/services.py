@@ -62,17 +62,14 @@ def visible_notices(user, school, *, include_dead=False):
     if SCOPE_ALL in scopes:
         return qs
 
-    section_ids = set()
+    # Sub-queries rather than lists of ids, so this stays one database query however it is used
+    # (it also runs on every page, for the "new" count in the navigation).
+    kind = NoticeTarget.Kind
+    audience = Q(targets__kind=kind.SCHOOL) | Q(targets__kind=kind.ROLE, targets__role__in={m.role_id for m in memberships})
     for scope in scopes:
-        section_ids |= set(sections_in_scope(user, school, scope).values_list("pk", flat=True))
-    grade_ids = set(Section.objects.filter(pk__in=section_ids).values_list("grade_id", flat=True))
-    role_ids = {m.role_id for m in memberships}
-    audience = (
-        Q(targets__kind=NoticeTarget.Kind.SCHOOL)
-        | Q(targets__kind=NoticeTarget.Kind.ROLE, targets__role__in=role_ids)
-        | Q(targets__kind=NoticeTarget.Kind.GRADE, targets__grade__in=grade_ids)
-        | Q(targets__kind=NoticeTarget.Kind.SECTION, targets__section__in=section_ids)
-    )
+        sections = sections_in_scope(user, school, scope).values("pk")
+        grades = Section.objects.filter(pk__in=sections).values("grade_id")
+        audience |= Q(targets__kind=kind.SECTION, targets__section__in=sections) | Q(targets__kind=kind.GRADE, targets__grade__in=grades)
     return qs.filter(audience | Q(author=user)).distinct()
 
 

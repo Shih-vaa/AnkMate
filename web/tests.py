@@ -133,7 +133,7 @@ class StudentListTests(WorldTestCase):
             s = Student.objects.create(school=self.school_a, admission_no=f"X{i}", first_name=f"Extra{i}")
             Enrollment.objects.create(school=self.school_a, student=s, section=self.sec5a, roll_no=10 + i)
         self.assertEqual(count_queries(), before)
-        self.assertLessEqual(before, 8)
+        self.assertLessEqual(before, 10)  # includes the two counts behind the navigation's "new" badge
 
 
 class StudentDetailTests(WorldTestCase):

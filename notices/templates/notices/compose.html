@@ -1,0 +1,78 @@
+{% extends "web/base.html" %}
+{% block title %}{% if notice %}Edit notice{% else %}Post a notice{% endif %}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% if notice %}{% url 'notice_detail' notice.pk %}{% else %}{% url 'notice_list' %}{% endif %}">&larr; {% if notice %}Back to the notice{% else %}Notices{% endif %}</a></p>
+
+{% if nobody %}
+  <div class="page-head"><h1>Post a notice</h1></div>
+  <div class="card empty">You can post notices to the classes you teach, and you aren't assigned to any class yet. Please ask the school office.</div>
+{% else %}
+<div class="page-head">
+  <h1>{% if notice %}Edit notice{% else %}Post a notice{% endif %}</h1>
+  <p class="muted">{% if notice %}You can fix the wording. Who it is for stays as it was.{% else %}Everyone you choose below will see it under Notices.{% endif %}</p>
+</div>
+
+<form method="post" class="card compose" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+
+  <div class="field">
+    <label for="{{ form.title.id_for_label }}">Title</label>
+    {{ form.title }}
+    {{ form.title.errors }}
+  </div>
+  <div class="field">
+    <label for="{{ form.body.id_for_label }}">Notice</label>
+    {{ form.body }}
+    <div class="muted small">{{ form.body.help_text }}</div>
+    {{ form.body.errors }}
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="{{ form.category.id_for_label }}">Kind</label>
+      {{ form.category }}
+      {{ form.category.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.expires_on.id_for_label }}">{{ form.expires_on.label }}</label>
+      {{ form.expires_on }}
+      <div class="muted small">{{ form.expires_on.help_text }}</div>
+      {{ form.expires_on.errors }}
+    </div>
+  </div>
+
+  {% if notice %}
+    <div class="field"><label>For</label><p style="margin:0">{{ audience_labels|join:", " }}</p></div>
+  {% else %}
+    <fieldset class="audience">
+      <legend>Who is it for?</legend>
+      {% if form.everyone %}
+        <label class="check"><input type="checkbox" name="everyone" value="on"{% if form.everyone.value %} checked{% endif %}> Everyone in the school</label>
+        <div class="muted small" style="margin-bottom:.5rem">Parents, students and staff. If you tick this, the choices below are not needed.</div>
+      {% endif %}
+      {% if form.roles %}
+        <div class="pick"><strong>By role</strong>
+          {% for choice in form.roles %}<label class="check">{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}
+        </div>
+      {% endif %}
+      {% if form.grades %}
+        <div class="pick"><strong>Whole classes</strong>
+          <span class="muted small">Parents, students and teachers of every section</span>
+          {% for choice in form.grades %}<label class="check">{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}
+        </div>
+      {% endif %}
+      <div class="pick"><strong>{% if form.everyone %}Single sections{% else %}Your classes{% endif %}</strong>
+        <span class="muted small">Parents and students of that section{% if not form.everyone %}, and its teachers{% endif %}</span>
+        {% for choice in form.sections %}<label class="check">{{ choice.tag }} {{ choice.choice_label }}</label>{% empty %}<span class="muted">None</span>{% endfor %}
+      </div>
+      {{ form.roles.errors }}{{ form.grades.errors }}{{ form.sections.errors }}
+    </fieldset>
+  {% endif %}
+
+  <div class="actions">
+    <button class="btn" type="submit">{% if notice %}Save changes{% else %}Post notice{% endif %}</button>
+    <a class="btn secondary" href="{% if notice %}{% url 'notice_detail' notice.pk %}{% else %}{% url 'notice_list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
