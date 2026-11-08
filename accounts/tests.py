@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from academics.models import AcademicYear, Enrollment
-from accounts.access import has_perm, permissions_for, scopes_for, students_in_scope, visible_students
+from accounts.access import has_perm, permissions_for, scopes_for, sections_in_scope, students_in_scope, visible_students
 from accounts.models import Membership, Role, normalize_phone
 from core.testing import PASSWORD, WorldTestCase
 from people.models import Student
@@ -68,6 +68,50 @@ class ScopedVisibilityTests(WorldTestCase):
         # Scope uses the CURRENT year only: a past-year enrolment must not grant access.
         AcademicYear.objects.filter(pk=self.year_a.pk).update(is_current=False)
         self.assertEqual(self.admission_nos(visible_students(self.u_t1, self.school_a)), set())
+
+
+class SectionsInScopeTests(WorldTestCase):
+    """Which class sections a scope connects a person to (used to decide who is in a notice's audience)."""
+
+    def names(self, user, scope, school=None):
+        return {str(s) for s in sections_in_scope(user, school or self.school_a, scope)}
+
+    def test_school_wide_sees_every_current_section_of_the_school_only(self):
+        self.assertEqual(len(self.names(self.u_admin, "all")), 3)
+        self.assertEqual(len(self.names(self.u_admin_b, "all", self.school_b)), 1)
+
+    def test_a_teacher_gets_the_sections_they_teach_or_are_class_teacher_of(self):
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_t1, self.school_a, "assigned")}, {self.sec5a.pk})
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_t2, self.school_a, "assigned")}, {self.sec5b.pk})
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_dual, self.school_a, "assigned")}, {self.sec6a.pk})
+        self.assertEqual(self.names(self.u_t3, "assigned"), set())  # teaches nothing yet
+
+    def test_a_parent_gets_the_sections_their_children_are_in(self):
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_p1, self.school_a, "children")}, {self.sec5a.pk, self.sec5b.pk})
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_p2, self.school_a, "children")}, {self.sec5a.pk})
+
+    def test_a_student_gets_their_own_section(self):
+        self.assertEqual({s.pk for s in sections_in_scope(self.u_student, self.school_a, "self")}, {self.sec5a.pk})
+
+    def test_a_scope_the_person_has_no_link_for_gives_nothing(self):
+        self.assertEqual(self.names(self.u_p1, "assigned"), set())
+        self.assertEqual(self.names(self.u_t1, "children"), set())
+        self.assertEqual(self.names(self.u_orphan, "self"), set())
+
+    def test_other_schools_and_past_years_never_leak_in(self):
+        self.assertEqual(self.names(self.u_pb, "children"), set())  # parent of a school-B child, asked about school A
+        AcademicYear.objects.filter(pk=self.year_a.pk).update(is_current=False)
+        self.assertEqual(self.names(self.u_p1, "children"), set())
+        self.assertEqual(self.names(self.u_admin, "all"), set())
+
+    def test_a_deactivated_staff_profile_loses_their_sections(self):
+        self.t1.is_active = False
+        self.t1.save()
+        self.assertEqual(self.names(self.u_t1, "assigned"), set())
+
+    def test_one_section_is_not_listed_twice(self):
+        sections = list(sections_in_scope(self.u_p1, self.school_a, "children"))
+        self.assertEqual(len(sections), len({s.pk for s in sections}))
 
 
 class SchoolIsolationTests(WorldTestCase):

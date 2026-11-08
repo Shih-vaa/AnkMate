@@ -82,6 +82,25 @@ def students_in_scope(user, school, scope):
     return base.none() if q is None else base.filter(q).distinct()
 
 
+def sections_in_scope(user, school, scope):
+    """Current-year class sections that one scope connects the user to: every section for school-wide roles,
+    the sections a teacher teaches, or the sections their children (or they themselves) are enrolled in."""
+    from academics.models import Section
+    from people.models import Staff, Student
+
+    base = Section.objects.filter(school=school, academic_year__is_current=True)
+    if scope == SCOPE_ALL:
+        return base
+    if scope == SCOPE_ASSIGNED:
+        staff = Staff.objects.filter(school=school, user=user, is_active=True).values("pk")
+        return base.filter(Q(class_teacher__in=staff) | Q(assignments__teacher__in=staff)).distinct()
+    q = _scope_q(user, school, scope)
+    if q is None:
+        return base.none()
+    students = Student.objects.filter(school=school).filter(q).values("pk")
+    return base.filter(enrollments__student__in=students).distinct()
+
+
 def visible_students(user, school, perm="students.view"):
     """Union of everything the user's roles *that grant `perm`* allow them to see."""
     from people.models import Student

@@ -13,6 +13,7 @@ from people.models import Student
 
 from . import services
 from .models import AttendanceRecord, Holiday, Status
+from .signals import attendance_saved
 
 TODAY = date(2026, 11, 4)  # a Wednesday, inside the fixture's 2026-27 academic year
 SUNDAY = date(2026, 11, 1)
@@ -186,6 +187,41 @@ class SavingTests(ClockMixin, WorldTestCase):
         self.mark(self.sec5a, TODAY - timedelta(days=1), {self.asha: "P"})
         Enrollment.objects.filter(student=self.asha).update(section=self.sec5b)
         self.assertEqual(AttendanceRecord.objects.get(student=self.asha).section, self.sec5a)
+
+
+class SavedSignalTests(ClockMixin, WorldTestCase):
+    """Other parts of the system can listen for saved attendance, but can never stop it being saved."""
+
+    def listen(self, handler):
+        attendance_saved.connect(handler, weak=False, dispatch_uid="test-listener")
+        self.addCleanup(attendance_saved.disconnect, dispatch_uid="test-listener")
+
+    def test_listeners_are_told_what_was_saved(self):
+        calls = []
+        self.listen(lambda sender, **kw: calls.append(kw))
+        self.mark(self.sec5a, TODAY, {self.asha: "A", self.bimal: "P"}, user=self.u_t1)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["section"], self.sec5a)
+        self.assertEqual(calls[0]["on_date"], TODAY)
+        self.assertEqual(calls[0]["marks"], {self.asha.pk: "A", self.bimal.pk: "P"})
+        self.assertEqual(calls[0]["user"], self.u_t1)
+
+    def test_nothing_is_sent_when_the_save_is_refused(self):
+        calls = []
+        self.listen(lambda sender, **kw: calls.append(kw))
+        with self.assertRaises(services.AttendanceError):
+            self.mark(self.sec5a, TODAY, {self.asha: "P", self.chitra: "P"})
+        self.assertEqual(calls, [])
+
+    def test_a_listener_that_fails_cannot_undo_the_attendance(self):
+        def broken(sender, **kw):
+            raise RuntimeError("listener bug")
+
+        self.listen(broken)
+        with self.assertLogs("attendance.services", level="ERROR"):
+            n = self.mark(self.sec5a, TODAY, {self.asha: "A"})
+        self.assertEqual(n, 1)
+        self.assertEqual(AttendanceRecord.objects.get(student=self.asha, date=TODAY).status, "A")
 
 
 class SummaryTests(ClockMixin, WorldTestCase):
